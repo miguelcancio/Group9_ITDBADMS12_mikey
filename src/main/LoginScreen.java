@@ -2,7 +2,6 @@ package main;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.*;
 import java.sql.*;
 
 public class LoginScreen extends JFrame {
@@ -13,84 +12,84 @@ public class LoginScreen extends JFrame {
     public LoginScreen() {
         setTitle("📚 BookMart Online - Login");
         setSize(400, 300);
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setDefaultCloseOperation(EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
 
         JPanel panel = new JPanel(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(10,10,10,10);
+        gbc.insets = new Insets(8,8,8,8);
         gbc.fill = GridBagConstraints.HORIZONTAL;
 
-        panel.add(new JLabel("Email:"), setPosition(gbc,0,0));
+        panel.add(new JLabel("Email:"), position(gbc,0,0));
         emailField = new JTextField(20);
-        panel.add(emailField, setPosition(gbc,1,0));
+        panel.add(emailField, position(gbc,1,0));
 
-        panel.add(new JLabel("Password:"), setPosition(gbc,0,1));
+        panel.add(new JLabel("Password:"), position(gbc,0,1));
         passwordField = new JPasswordField(20);
-        panel.add(passwordField, setPosition(gbc,1,1));
+        panel.add(passwordField, position(gbc,1,1));
 
-        JButton loginButton = new JButton("Login");
-        loginButton.addActionListener(e -> authenticateUser());
-        panel.add(loginButton, setPosition(gbc,0,2,2,1));
+        JButton loginBtn = new JButton("Login");
+        loginBtn.addActionListener(e -> login());
+        panel.add(loginBtn, position(gbc,0,2));
 
-        statusLabel = new JLabel("", SwingConstants.CENTER);
-        panel.add(statusLabel, setPosition(gbc,0,3,2,1));
+        JButton signUpBtn = new JButton("Sign Up");
+        signUpBtn.addActionListener(e -> new SignUpScreen().setVisible(true));
+        panel.add(signUpBtn, position(gbc,1,2));
+
+        statusLabel = new JLabel(" ", SwingConstants.CENTER);
+        panel.add(statusLabel, position(gbc,0,3,2,1));
 
         add(panel);
     }
 
-    private GridBagConstraints setPosition(GridBagConstraints gbc, int x, int y) {
-        gbc.gridx = x;
-        gbc.gridy = y;
-        gbc.gridwidth = 1;
+    private GridBagConstraints position(GridBagConstraints gbc, int x, int y) {
+        return position(gbc,x,y,1,1);
+    }
+
+    private GridBagConstraints position(GridBagConstraints gbc, int x, int y, int w, int h) {
+        gbc.gridx = x; gbc.gridy = y;
+        gbc.gridwidth = w; gbc.gridheight = h;
         return gbc;
     }
 
-    private GridBagConstraints setPosition(GridBagConstraints gbc, int x, int y, int w, int h) {
-        gbc.gridx = x;
-        gbc.gridy = y;
-        gbc.gridwidth = w;
-        gbc.gridheight = h;
-        return gbc;
-    }
-
-    private void authenticateUser() {
+    private void login() {
         String email = emailField.getText();
-        String password = String.valueOf(passwordField.getPassword());
+        String pass = String.valueOf(passwordField.getPassword());
+
+        if(email.isEmpty() || pass.isEmpty()) {
+            statusLabel.setText("❌ Please fill all fields.");
+            return;
+        }
 
         try (Connection conn = DBConnection.getConnection()) {
             if (conn == null) {
-                statusLabel.setText("❌ DB Connection failed.");
+                statusLabel.setText("❌ Cannot connect to DB.");
                 return;
             }
-            String sql = "SELECT role FROM users WHERE email=? AND password=?";
-            PreparedStatement stmt = conn.prepareStatement(sql);
+            PreparedStatement stmt = conn.prepareStatement("SELECT role FROM users WHERE email=? AND password=?");
             stmt.setString(1, email);
-            stmt.setString(2, password);
-
+            stmt.setString(2, pass);
             ResultSet rs = stmt.executeQuery();
+
             if (rs.next()) {
                 String role = rs.getString("role");
-                statusLabel.setText("✅ Login: " + role);
-                openDashboard(role);
+                openRoleDashboard(role);
                 dispose();
             } else {
-                statusLabel.setText("❌ Invalid credentials.");
+                statusLabel.setText("❌ Wrong email or password.");
             }
-
         } catch (SQLException e) {
             e.printStackTrace();
             statusLabel.setText("❌ DB error.");
         }
     }
 
-    private void openDashboard(String role) {
-        switch (role.toLowerCase()) {
+    private void openRoleDashboard(String role) {
+        switch(role.toLowerCase()) {
             case "admin":
                 new AdminPanel().setVisible(true); break;
             case "staff":
-                JOptionPane.showMessageDialog(this,"✅ Staff Dashboard placeholder.");
-                break;
+                new StaffPanel().setVisible(true); break;
             case "customer":
                 new CustomerCatalog().setVisible(true); break;
             default:

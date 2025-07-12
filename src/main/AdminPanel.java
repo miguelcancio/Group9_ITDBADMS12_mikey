@@ -6,72 +6,66 @@ import java.awt.*;
 import java.sql.*;
 
 public class AdminPanel extends JFrame {
-    private JTable bookTable;
     private DefaultTableModel tableModel;
 
     public AdminPanel() {
-        setTitle("📚 BookMart Admin Panel");
-        setSize(600,400);
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setTitle("📚 Admin Dashboard - BookMart");
+        setSize(700,400);
+        setDefaultCloseOperation(EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
 
         tableModel = new DefaultTableModel(new String[]{"ID","Title","Genre","Price","Stock"},0);
-        bookTable = new JTable(tableModel);
+        JTable table = new JTable(tableModel);
         loadBooks();
 
-        JButton addBtn = new JButton("Add Book");
-        addBtn.addActionListener(e -> showAddDialog());
+        JButton addBtn = new JButton("➕ Add Book");
+        addBtn.addActionListener(e -> addBookDialog());
 
-        add(new JScrollPane(bookTable), BorderLayout.CENTER);
+        add(new JScrollPane(table), BorderLayout.CENTER);
         add(addBtn, BorderLayout.SOUTH);
     }
 
     private void loadBooks() {
         try (Connection conn = DBConnection.getConnection()) {
-            if (conn == null) return;
             ResultSet rs = conn.createStatement().executeQuery(
-                    "SELECT book_id, title, genre, price, stock_quantity FROM books");
+                "SELECT book_id, title, genre, price, stock_quantity FROM books");
             tableModel.setRowCount(0);
             while (rs.next()) {
                 tableModel.addRow(new Object[]{
-                        rs.getInt("book_id"),
-                        rs.getString("title"),
-                        rs.getString("genre"),
-                        rs.getDouble("price"),
-                        rs.getInt("stock_quantity")
+                    rs.getInt(1), rs.getString(2), rs.getString(3),
+                    rs.getDouble(4), rs.getInt(5)
                 });
             }
         } catch (SQLException e) { e.printStackTrace(); }
     }
 
-    private void showAddDialog() {
-        JTextField title = new JTextField(), genre = new JTextField();
-        JTextField price = new JTextField(), stock = new JTextField();
+    private void addBookDialog() {
+        JTextField t=new JTextField(), g=new JTextField(),
+                   p=new JTextField(), s=new JTextField();
+        JPanel panel=new JPanel(new GridLayout(4,2));
+        panel.add(new JLabel("Title:")); panel.add(t);
+        panel.add(new JLabel("Genre:")); panel.add(g);
+        panel.add(new JLabel("Price:")); panel.add(p);
+        panel.add(new JLabel("Stock:")); panel.add(s);
 
-        JPanel panel = new JPanel(new GridLayout(4,2));
-        panel.add(new JLabel("Title:")); panel.add(title);
-        panel.add(new JLabel("Genre:")); panel.add(genre);
-        panel.add(new JLabel("Price:")); panel.add(price);
-        panel.add(new JLabel("Stock:")); panel.add(stock);
-
-        if (JOptionPane.showConfirmDialog(this, panel, "Add Book",
-                JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION) {
-            addBook(title.getText(), genre.getText(),
-                    Double.parseDouble(price.getText()), Integer.parseInt(stock.getText()));
+        if(JOptionPane.showConfirmDialog(this,panel,"Add Book",
+            JOptionPane.OK_CANCEL_OPTION)==JOptionPane.OK_OPTION){
+            addBook(t.getText(),g.getText(),
+                    Double.parseDouble(p.getText()),Integer.parseInt(s.getText()));
             loadBooks();
         }
     }
 
     private void addBook(String title, String genre, double price, int stock) {
         try (Connection conn = DBConnection.getConnection()) {
-            String sql = "INSERT INTO books (title, genre, price, stock_quantity) VALUES (?, ?, ?, ?)";
-            PreparedStatement stmt = conn.prepareStatement(sql);
+            PreparedStatement stmt = conn.prepareStatement(
+                "INSERT INTO books (title, genre, price, stock_quantity) VALUES (?,?,?,?)");
             stmt.setString(1, title);
             stmt.setString(2, genre);
             stmt.setDouble(3, price);
             stmt.setInt(4, stock);
             stmt.executeUpdate();
-            JOptionPane.showMessageDialog(this, "✅ Book Added!");
+            JOptionPane.showMessageDialog(this,"✅ Book added.");
         } catch (SQLException e) { e.printStackTrace(); }
     }
 }
