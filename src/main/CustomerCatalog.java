@@ -39,8 +39,13 @@ public class CustomerCatalog extends JFrame {
         add(new JScrollPane(bookTable), BorderLayout.CENTER);
 
         JPanel bottomPanel = new JPanel();
+        JButton viewDetailsBtn = new JButton("View Details");
         JButton addToCartBtn = new JButton("Add to Cart");
+
+        viewDetailsBtn.setEnabled(false);
         addToCartBtn.setEnabled(false);
+
+        bottomPanel.add(viewDetailsBtn);
         bottomPanel.add(addToCartBtn);
         add(bottomPanel, BorderLayout.SOUTH);
 
@@ -54,7 +59,14 @@ public class CustomerCatalog extends JFrame {
 
         bookTable.getSelectionModel().addListSelectionListener(e -> {
             selectedBookId = bookTable.getSelectedRow()>=0 ? (int)tableModel.getValueAt(bookTable.getSelectedRow(),0) : -1;
-            addToCartBtn.setEnabled(selectedBookId!=-1);
+            boolean enabled = selectedBookId!=-1;
+            viewDetailsBtn.setEnabled(enabled);
+            addToCartBtn.setEnabled(enabled);
+        });
+
+        viewDetailsBtn.addActionListener(e -> {
+            if(selectedBookId!=-1)
+                new BookDetails(selectedBookId, currentCurrency).setVisible(true);
         });
 
         addToCartBtn.addActionListener(e -> {
