@@ -10,15 +10,14 @@ public class SignUpScreen extends JFrame {
     private JLabel statusLabel;
 
     public SignUpScreen() {
-        setTitle("✍️ Sign Up - BookMart Online");
-        setSize(400, 300);
+        setTitle("✍️ Sign Up - BookMart");
+        setSize(400,300);
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
         setLocationRelativeTo(null);
 
         JPanel panel = new JPanel(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(8,8,8,8);
-        gbc.fill = GridBagConstraints.HORIZONTAL;
 
         panel.add(new JLabel("Name:"), position(gbc,0,0));
         nameField = new JTextField(20);
@@ -47,47 +46,27 @@ public class SignUpScreen extends JFrame {
     }
 
     private GridBagConstraints position(GridBagConstraints gbc, int x, int y, int w, int h) {
-        gbc.gridx = x; gbc.gridy = y;
-        gbc.gridwidth = w; gbc.gridheight = h;
+        gbc.gridx = x; gbc.gridy = y; gbc.gridwidth = w; gbc.gridheight = h;
         return gbc;
     }
 
     private void signUp() {
-        String name = nameField.getText();
-        String email = emailField.getText();
-        String pass = String.valueOf(passwordField.getPassword());
-
-        if(name.isEmpty() || email.isEmpty() || pass.isEmpty()) {
-            statusLabel.setText("❌ Please fill all fields.");
-            return;
-        }
-
         try (Connection conn = DBConnection.getConnection()) {
-            if (conn == null) {
-                statusLabel.setText("❌ DB connection failed.");
-                return;
-            }
-
-            // Check if email already exists
-            PreparedStatement checkStmt = conn.prepareStatement("SELECT * FROM users WHERE email=?");
-            checkStmt.setString(1, email);
-            ResultSet rs = checkStmt.executeQuery();
+            PreparedStatement check = conn.prepareStatement("SELECT * FROM users WHERE email=?");
+            check.setString(1, emailField.getText());
+            ResultSet rs = check.executeQuery();
             if (rs.next()) {
-                statusLabel.setText("❌ Email already registered.");
+                statusLabel.setText("❌ Email already exists.");
                 return;
             }
-
-            // Insert new customer
-            PreparedStatement insertStmt = conn.prepareStatement(
+            PreparedStatement stmt = conn.prepareStatement(
                 "INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, 'Customer')");
-            insertStmt.setString(1, name);
-            insertStmt.setString(2, email);
-            insertStmt.setString(3, pass);
-            insertStmt.executeUpdate();
-
-            JOptionPane.showMessageDialog(this, "✅ Account created! Please log in.");
-            this.dispose();
-
+            stmt.setString(1, nameField.getText());
+            stmt.setString(2, emailField.getText());
+            stmt.setString(3, String.valueOf(passwordField.getPassword()));
+            stmt.executeUpdate();
+            JOptionPane.showMessageDialog(this, "✅ Account created. Please login.");
+            dispose();
         } catch (SQLException e) {
             e.printStackTrace();
             statusLabel.setText("❌ DB error.");

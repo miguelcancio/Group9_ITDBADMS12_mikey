@@ -6,36 +6,88 @@ import java.awt.*;
 import java.sql.*;
 
 public class CustomerCatalog extends JFrame {
+    private JComboBox<String> currencySelector;
+    private JTextField searchField;
     private DefaultTableModel tableModel;
+    private String currentCurrency = "PHP";
+    private JTable bookTable;
+    private int selectedBookId = -1;
 
     public CustomerCatalog() {
-        setTitle("📚 Browse Books - BookMart");
-        setSize(700,400);
+        setTitle("📚 BookMart Online - Browse Books");
+        setSize(850, 500);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
+        setLayout(new BorderLayout());
+
+        JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        JButton homeBtn = new JButton("Home");
+        JButton cartBtn = new JButton("Cart");
+        JButton logoutBtn = new JButton("Logout");
+
+        currencySelector = new JComboBox<>(new String[]{"PHP", "USD", "KRW"});
+        searchField = new JTextField(20);
+        JButton searchBtn = new JButton("Search");
+
+        topPanel.add(homeBtn); topPanel.add(cartBtn); topPanel.add(logoutBtn);
+        topPanel.add(new JLabel("Currency:")); topPanel.add(currencySelector);
+        topPanel.add(searchField); topPanel.add(searchBtn);
+        add(topPanel, BorderLayout.NORTH);
 
         tableModel = new DefaultTableModel(new String[]{"ID","Title","Genre","Price","Stock"},0);
-        JTable table = new JTable(tableModel);
-        loadBooks();
+        bookTable = new JTable(tableModel);
+        add(new JScrollPane(bookTable), BorderLayout.CENTER);
 
-        JButton cartBtn = new JButton("🛒 View Cart / Place Order");
+        JPanel bottomPanel = new JPanel();
+        JButton addToCartBtn = new JButton("Add to Cart");
+        addToCartBtn.setEnabled(false);
+        bottomPanel.add(addToCartBtn);
+        add(bottomPanel, BorderLayout.SOUTH);
+
+        loadBooks("", currentCurrency);
+
+        currencySelector.addActionListener(e -> { currentCurrency=(String)currencySelector.getSelectedItem(); loadBooks(searchField.getText(), currentCurrency); });
+        searchBtn.addActionListener(e -> loadBooks(searchField.getText(), currentCurrency));
+        homeBtn.addActionListener(e -> loadBooks("", currentCurrency));
         cartBtn.addActionListener(e -> new Cart().setVisible(true));
+        logoutBtn.addActionListener(e -> { dispose(); new LoginScreen().setVisible(true); });
 
-        add(new JScrollPane(table), BorderLayout.CENTER);
-        add(cartBtn, BorderLayout.SOUTH);
+        bookTable.getSelectionModel().addListSelectionListener(e -> {
+            selectedBookId = bookTable.getSelectedRow()>=0 ? (int)tableModel.getValueAt(bookTable.getSelectedRow(),0) : -1;
+            addToCartBtn.setEnabled(selectedBookId!=-1);
+        });
+
+        addToCartBtn.addActionListener(e -> {
+            if(selectedBookId!=-1){
+                int qty = Integer.parseInt(JOptionPane.showInputDialog(this,"Enter quantity:","1"));
+                try (Connection conn = DBConnection.getConnection()) {
+                    PreparedStatement stmt = conn.prepareStatement(
+                        "INSERT INTO cart_items (user_id, book_id, quantity) VALUES (?, ?, ?) " +
+                        "ON DUPLICATE KEY UPDATE quantity = quantity + VALUES(quantity)");
+                    stmt.setInt(1, LoginScreen.loggedInUserId);
+                    stmt.setInt(2, selectedBookId);
+                    stmt.setInt(3, qty);
+                    stmt.executeUpdate();
+                    JOptionPane.showMessageDialog(this,"✅ Added to cart!");
+                } catch(Exception ex){ ex.printStackTrace(); }
+            }
+        });
     }
 
-    private void loadBooks() {
+    private void loadBooks(String keyword, String currency) {
         try (Connection conn = DBConnection.getConnection()) {
-            ResultSet rs = conn.createStatement().executeQuery(
-                "SELECT book_id, title, genre, price, stock_quantity FROM books");
+            String sql = """
+                SELECT b.book_id, b.title, b.genre,
+                ROUND(b.price * c.exchange_rate_to_php,2) AS converted_price, b.stock_quantity
+                FROM books b JOIN currencies c ON c.currency_code=?
+                WHERE b.title LIKE ? OR b.genre LIKE ?
+            """;
+            PreparedStatement stmt = conn.prepareStatement(sql);
+            stmt.setString(1, currency); stmt.setString(2,"%"+keyword+"%"); stmt.setString(3,"%"+keyword+"%");
+            ResultSet rs = stmt.executeQuery();
             tableModel.setRowCount(0);
-            while (rs.next()) {
-                tableModel.addRow(new Object[]{
-                    rs.getInt(1), rs.getString(2), rs.getString(3),
-                    rs.getDouble(4), rs.getInt(5)
-                });
-            }
-        } catch (SQLException e) { e.printStackTrace(); }
+            while(rs.next())
+                tableModel.addRow(new Object[]{rs.getInt(1),rs.getString(2),rs.getString(3),rs.getDouble(4),rs.getInt(5)});
+        } catch(SQLException e){ e.printStackTrace(); }
     }
 }

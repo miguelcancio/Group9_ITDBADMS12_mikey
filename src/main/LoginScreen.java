@@ -5,6 +5,8 @@ import java.awt.*;
 import java.sql.*;
 
 public class LoginScreen extends JFrame {
+    public static int loggedInUserId = -1;
+
     private JTextField emailField;
     private JPasswordField passwordField;
     private JLabel statusLabel;
@@ -18,7 +20,6 @@ public class LoginScreen extends JFrame {
         JPanel panel = new JPanel(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(8,8,8,8);
-        gbc.fill = GridBagConstraints.HORIZONTAL;
 
         panel.add(new JLabel("Email:"), position(gbc,0,0));
         emailField = new JTextField(20);
@@ -47,36 +48,25 @@ public class LoginScreen extends JFrame {
     }
 
     private GridBagConstraints position(GridBagConstraints gbc, int x, int y, int w, int h) {
-        gbc.gridx = x; gbc.gridy = y;
-        gbc.gridwidth = w; gbc.gridheight = h;
+        gbc.gridx = x; gbc.gridy = y; gbc.gridwidth = w; gbc.gridheight = h;
         return gbc;
     }
 
     private void login() {
-        String email = emailField.getText();
-        String pass = String.valueOf(passwordField.getPassword());
-
-        if(email.isEmpty() || pass.isEmpty()) {
-            statusLabel.setText("❌ Please fill all fields.");
-            return;
-        }
-
         try (Connection conn = DBConnection.getConnection()) {
-            if (conn == null) {
-                statusLabel.setText("❌ Cannot connect to DB.");
-                return;
-            }
-            PreparedStatement stmt = conn.prepareStatement("SELECT role FROM users WHERE email=? AND password=?");
-            stmt.setString(1, email);
-            stmt.setString(2, pass);
+            String sql = "SELECT user_id, role FROM users WHERE email=? AND password=?";
+            PreparedStatement stmt = conn.prepareStatement(sql);
+            stmt.setString(1, emailField.getText());
+            stmt.setString(2, String.valueOf(passwordField.getPassword()));
             ResultSet rs = stmt.executeQuery();
 
             if (rs.next()) {
+                loggedInUserId = rs.getInt("user_id");
                 String role = rs.getString("role");
-                openRoleDashboard(role);
+                openDashboard(role);
                 dispose();
             } else {
-                statusLabel.setText("❌ Wrong email or password.");
+                statusLabel.setText("❌ Invalid credentials.");
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -84,16 +74,11 @@ public class LoginScreen extends JFrame {
         }
     }
 
-    private void openRoleDashboard(String role) {
+    private void openDashboard(String role) {
         switch(role.toLowerCase()) {
-            case "admin":
-                new AdminPanel().setVisible(true); break;
-            case "staff":
-                new StaffPanel().setVisible(true); break;
-            case "customer":
-                new CustomerCatalog().setVisible(true); break;
-            default:
-                JOptionPane.showMessageDialog(this,"Unknown role: "+role);
+            case "admin": /*new AdminPanel().setVisible(true);*/ break;
+            case "staff": /*new StaffPanel().setVisible(true);*/ break;
+            default: new CustomerCatalog().setVisible(true);
         }
     }
 
