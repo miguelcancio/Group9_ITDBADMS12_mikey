@@ -95,10 +95,11 @@ CREATE TABLE transaction_logs (
 
 -- Users
 INSERT INTO users (name, email, password, role) VALUES
-(1, 1, 1, 1, 'Customer'),
-('Admin User', 'admin@bookmart.com', 'adminpass', 'Admin'),
-('Staff Member', 'staff@bookmart.com', 'staffpass', 'Staff'),
-('Sample Customer', 'customer@bookmart.com', 'custpass', 'Customer');
+('Jericho', 'jericho@email.com', 'jericho123', 'Admin'),
+('AC', 'AC@email.com', 'AC12345', 'Staff'),
+('Luis', 'Luis@email.com', 'Luis12345', 'Staff'),
+('Miguel', 'Miguel@email.com', 'Miguel12345', 'Staff'),
+('JohnDoe', 'JohnDoe@bookmart.com', 'JohnDoe12345', 'Customer');
 
 -- Books
 INSERT INTO books (title, genre, price, stock_quantity) VALUES
