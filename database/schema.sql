@@ -115,3 +115,52 @@ INSERT INTO currencies (currency_code, symbol, exchange_rate_to_php) VALUES
 ('PHP', '₱', 1.0000),
 ('USD', '$', 55.0000),
 ('KRW', '₩', 0.0420);
+
+
+-- Delimiters and triggers for the database :p --
+
+-- Triggers if theres a price change in the database
+CREATE TABLE price_audit(
+  audit_id INT AUTO_INCREMENT PRIMARY KEY,
+  book_id INT,
+  old_price DECIMAL(10,2),
+  new_price DECIMAL(10,2),
+  changed_by_user INT,
+  changed_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+DELIMITER $$
+CREATE TRIGGER price_change
+AFTER UPDATE ON books
+FOR EACH ROW
+BEGIN
+    IF OLD.price != NEW.price THEN
+        INSERT INTO price_audit (book_id, old_price, new_price, changed_by_user)
+        VALUES (OLD.book_id, OLD.price, NEW.price, NULL);
+    END IF;
+END $$
+DELIMITER ;
+
+
+-- If the stock changes --
+CREATE TABLE IF NOT EXISTS stock_log (
+  log_id INT AUTO_INCREMENT PRIMARY KEY,
+  book_id INT,
+  old_stock INT,
+  new_stock INT,
+  changed_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+DELIMITER $$
+CREATE TRIGGER after_order_item_insert
+AFTER INSERT ON order_items
+FOR EACH ROW
+BEGIN
+  DECLARE current_stock INT;
+  SELECT stock_quantity INTO current_stock FROM books WHERE book_id = NEW.book_id;
+  INSERT INTO stock_log (book_id, old_stock, new_stock)
+  VALUES (NEW.book_id, current_stock + NEW.quantity, current_stock);
+END$$
+DELIMITER ;
+
