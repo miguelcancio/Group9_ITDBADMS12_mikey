@@ -24,7 +24,7 @@ public class BookDetails extends JFrame {
         try (Connection conn = DBConnection.getConnection()) {
             String sql = """
                 SELECT b.title, b.genre, b.stock_quantity,
-                ROUND(b.price * c.exchange_rate_to_php,2) AS converted_price
+                ROUND(b.price / c.exchange_rate_to_php, 2) AS converted_price
                 FROM books b JOIN currencies c ON c.currency_code=?
                 WHERE b.book_id=?
             """;
