@@ -70,20 +70,50 @@ public class CustomerCatalog extends JFrame {
         });
 
         addToCartBtn.addActionListener(e -> {
-            if(selectedBookId!=-1){
-                int qty = Integer.parseInt(JOptionPane.showInputDialog(this,"Enter quantity:","1"));
-                try (Connection conn = DBConnection.getConnection()) {
-                    PreparedStatement stmt = conn.prepareStatement(
-                        "INSERT INTO cart_items (user_id, book_id, quantity) VALUES (?, ?, ?) " +
-                        "ON DUPLICATE KEY UPDATE quantity = quantity + VALUES(quantity)");
-                    stmt.setInt(1, LoginScreen.loggedInUserId);
-                    stmt.setInt(2, selectedBookId);
-                    stmt.setInt(3, qty);
-                    stmt.executeUpdate();
-                    JOptionPane.showMessageDialog(this,"✅ Added to cart!");
-                } catch(Exception ex){ ex.printStackTrace(); }
+            if (selectedBookId != -1) {
+                String input = JOptionPane.showInputDialog(this, "Enter quantity:", "1");
+
+                if (input != null) { // Cancel not pressed
+                    try {
+                        int qty = Integer.parseInt(input);
+
+                        if (qty < 1) {
+                            JOptionPane.showMessageDialog(this, "❌ Quantity must be at least 1.");
+                            return;
+                        }
+
+                        // Get current stock from the selected row in the table
+                        int selectedRow = bookTable.getSelectedRow();
+                        int stock = (int) tableModel.getValueAt(selectedRow, 4); // Column 4 = stock
+
+                        if (qty > stock) {
+                            JOptionPane.showMessageDialog(this, "❌ Not enough stock available. Only " + stock + " left.");
+                            return;
+                        }
+
+                        // Proceed to add to cart
+                        try (Connection conn = DBConnection.getConnection()) {
+                            PreparedStatement stmt = conn.prepareStatement(
+                                "INSERT INTO cart_items (user_id, book_id, quantity) VALUES (?, ?, ?) " +
+                                "ON DUPLICATE KEY UPDATE quantity = quantity + VALUES(quantity)");
+                            stmt.setInt(1, LoginScreen.loggedInUserId);
+                            stmt.setInt(2, selectedBookId);
+                            stmt.setInt(3, qty);
+                            stmt.executeUpdate();
+                            JOptionPane.showMessageDialog(this, "✅ Added to cart!");
+                        } catch (Exception ex) {
+                            ex.printStackTrace();
+                        }
+
+                    } catch (NumberFormatException ex) {
+                        JOptionPane.showMessageDialog(this, "❌ Please enter a valid number.");
+                    }
+                }
+                // else: Cancel pressed — do nothing
             }
         });
+
+
     }
 
     private void loadBooks(String keyword, String currency) {
