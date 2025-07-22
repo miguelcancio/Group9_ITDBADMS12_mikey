@@ -20,21 +20,28 @@ public class CustomerCatalog extends JFrame {
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
 
+        // 🔝 Top bar
         JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         JButton homeBtn = new JButton("Home");
         JButton cartBtn = new JButton("Cart");
+        JButton ordersBtn = new JButton("Order History"); // ✅ NEW
         JButton logoutBtn = new JButton("Logout");
 
         currencySelector = new JComboBox<>(new String[]{"PHP", "USD", "KRW"});
         searchField = new JTextField(20);
         JButton searchBtn = new JButton("Search");
 
-        topPanel.add(homeBtn); topPanel.add(cartBtn); topPanel.add(logoutBtn);
-        topPanel.add(new JLabel("Currency:")); topPanel.add(currencySelector);
-        topPanel.add(searchField); topPanel.add(searchBtn);
+        topPanel.add(homeBtn);
+        topPanel.add(cartBtn);
+        topPanel.add(ordersBtn); // ✅ NEW
+        topPanel.add(logoutBtn);
+        topPanel.add(new JLabel("Currency:"));
+        topPanel.add(currencySelector);
+        topPanel.add(searchField);
+        topPanel.add(searchBtn);
         add(topPanel, BorderLayout.NORTH);
 
-        tableModel = new DefaultTableModel(new String[]{"ID","Title","Genre","Price","Stock"},0);
+        tableModel = new DefaultTableModel(new String[]{"ID", "Title", "Genre", "Price", "Stock"}, 0);
         bookTable = new JTable(tableModel);
         add(new JScrollPane(bookTable), BorderLayout.CENTER);
 
@@ -51,24 +58,38 @@ public class CustomerCatalog extends JFrame {
 
         loadBooks("", currentCurrency);
 
-        currencySelector.addActionListener(e -> { currentCurrency=(String)currencySelector.getSelectedItem(); loadBooks(searchField.getText(), currentCurrency); });
+        // 🔁 Top button actions
+        currencySelector.addActionListener(e -> {
+            currentCurrency = (String) currencySelector.getSelectedItem();
+            loadBooks(searchField.getText(), currentCurrency);
+        });
+
         searchBtn.addActionListener(e -> loadBooks(searchField.getText(), currentCurrency));
         homeBtn.addActionListener(e -> loadBooks("", currentCurrency));
         cartBtn.addActionListener(e -> new Cart().setVisible(true));
-        logoutBtn.addActionListener(e -> { dispose(); new LoginScreen().setVisible(true); });
+        ordersBtn.addActionListener(e -> new OrderHistory().setVisible(true)); // ✅ NEW
+        logoutBtn.addActionListener(e -> {
+            dispose();
+            new LoginScreen().setVisible(true);
+        });
 
+        // 📌 Selection handling
         bookTable.getSelectionModel().addListSelectionListener(e -> {
-            selectedBookId = bookTable.getSelectedRow()>=0 ? (int)tableModel.getValueAt(bookTable.getSelectedRow(),0) : -1;
-            boolean enabled = selectedBookId!=-1;
+            selectedBookId = bookTable.getSelectedRow() >= 0
+                    ? (int) tableModel.getValueAt(bookTable.getSelectedRow(), 0)
+                    : -1;
+            boolean enabled = selectedBookId != -1;
             viewDetailsBtn.setEnabled(enabled);
             addToCartBtn.setEnabled(enabled);
         });
 
+        // 📘 View Book Details
         viewDetailsBtn.addActionListener(e -> {
-            if(selectedBookId!=-1)
+            if (selectedBookId != -1)
                 new BookDetails(selectedBookId, currentCurrency).setVisible(true);
         });
 
+        // 🛒 Add to Cart logic
         addToCartBtn.addActionListener(e -> {
             if (selectedBookId != -1) {
                 String input = JOptionPane.showInputDialog(this, "Enter quantity:", "1");
@@ -82,16 +103,14 @@ public class CustomerCatalog extends JFrame {
                             return;
                         }
 
-                        // Get current stock from the selected row in the table
                         int selectedRow = bookTable.getSelectedRow();
-                        int stock = (int) tableModel.getValueAt(selectedRow, 4); // Column 4 = stock
+                        int stock = (int) tableModel.getValueAt(selectedRow, 4);
 
                         if (qty > stock) {
-                            JOptionPane.showMessageDialog(this, "❌ Not enough stock available. Only " + stock + " left.");
+                            JOptionPane.showMessageDialog(this, "❌ Not enough stock. Only " + stock + " left.");
                             return;
                         }
 
-                        // Proceed to add to cart
                         try (Connection conn = DBConnection.getConnection()) {
                             PreparedStatement stmt = conn.prepareStatement(
                                 "INSERT INTO cart_items (user_id, book_id, quantity) VALUES (?, ?, ?) " +
@@ -109,11 +128,8 @@ public class CustomerCatalog extends JFrame {
                         JOptionPane.showMessageDialog(this, "❌ Please enter a valid number.");
                     }
                 }
-                // else: Cancel pressed — do nothing
             }
         });
-
-
     }
 
     private void loadBooks(String keyword, String currency) {
@@ -125,11 +141,20 @@ public class CustomerCatalog extends JFrame {
                 WHERE b.title LIKE ? OR b.genre LIKE ?
             """;
             PreparedStatement stmt = conn.prepareStatement(sql);
-            stmt.setString(1, currency); stmt.setString(2,"%"+keyword+"%"); stmt.setString(3,"%"+keyword+"%");
+            stmt.setString(1, currency);
+            stmt.setString(2, "%" + keyword + "%");
+            stmt.setString(3, "%" + keyword + "%");
             ResultSet rs = stmt.executeQuery();
+
             tableModel.setRowCount(0);
-            while(rs.next())
-                tableModel.addRow(new Object[]{rs.getInt(1),rs.getString(2),rs.getString(3),rs.getDouble(4),rs.getInt(5)});
-        } catch(SQLException e){ e.printStackTrace(); }
+            while (rs.next()) {
+                tableModel.addRow(new Object[]{
+                    rs.getInt(1), rs.getString(2), rs.getString(3),
+                    rs.getDouble(4), rs.getInt(5)
+                });
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 }
