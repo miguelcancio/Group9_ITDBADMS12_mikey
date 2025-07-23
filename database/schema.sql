@@ -114,7 +114,7 @@ INSERT INTO currencies (currency_code, symbol, exchange_rate_to_php) VALUES
 ('USD', '$', 55.0000),
 ('KRW', '₩', 0.0420);
 
--- DELETE FROM currencies WHERE currency_code = 'PHP'; --
+
 -- DELETE FROM currencies WHERE currency_code = 'USD'; --
 -- DELETE FROM currencies WHERE currency_code = 'KRW'; --
 
@@ -181,9 +181,86 @@ BEGIN
 END $$
 DELIMITER ;
 
+DELIMITER $$
+CREATE PROCEDURE getUserOrderHistory(IN userId INT)
+BEGIN
+    SELECT o.order_id, o.order_date, o.total_amount, c.currency_code, o.status
+    FROM orders o
+    JOIN currencies c ON o.currency_id = c.currency_id
+    WHERE o.user_id = userId;
+END $$
+DELIMITER ;
+
+DELIMITER $$
+CREATE PROCEDURE updateBookPrice(IN bookId INT, IN newPrice DECIMAL(10,2))
+BEGIN
+    UPDATE books
+    SET price = newPrice
+    WHERE book_id = bookId;
+END $$
+DELIMITER ;
+
+DELIMITER $$
+CREATE PROCEDURE updateStockQuantity(IN bookId INT, IN newStock INT)
+BEGIN
+    UPDATE books
+    SET stock_quantity = newStock
+    WHERE book_id = bookId;
+END $$
+DELIMITER ;
+
+
+DELIMITER $$
+CREATE PROCEDURE removeFromCart(IN userId INT, IN bookId INT)
+BEGIN
+    DELETE FROM cart_items
+    WHERE user_id = userId AND book_id = bookId;
+END $$
+DELIMITER ;
+
+DELIMITER $$
+CREATE PROCEDURE clearCart(IN userId INT)
+BEGIN
+    DELETE FROM cart_items
+    WHERE user_id = userId;
+END $$
+DELIMITER ;
+
+DELIMITER $$
+CREATE PROCEDURE removeBooks(IN bookId INT)
+BEGIN
+    DELETE FROM books
+    WHERE book_id = bookId;
+END $$
+DELIMITER ;
+
+DELIMITER $$
+CREATE PROCEDURE removeUsers(IN userId INT)
+BEGIN
+    DELETE FROM users
+    WHERE user_id = userId;
+END $$
+DELIMITER ;
+
+DELIMITER $$
+CREATE PROCEDURE addUsers(IN userName VARCHAR(100), IN userEmail Varchar(100), IN userPass VARCHAR(100))
+BEGIN
+INSERT INTO users (name, email, password) VALUES
+(userName, userEmail, userPass);
+END $$
+DELIMITER ;
+
+DELIMITER $$
+CREATE PROCEDURE addBooks(IN bookName VARCHAR(200), IN genre Varchar(100), IN bookPrice DECIMAL(10, 2), IN bookStock INT)
+BEGIN
+INSERT INTO books (title, genre, price, stock_quantity) VALUES
+(bookName, genre, bookPrice, bookStock);
+END $$
+DELIMITER ;
 
 
 -- triggers for the database :p --
+
 
 -- Triggers if theres a price change in the database --
 CREATE TABLE price_audit( 
@@ -228,4 +305,125 @@ BEGIN
   INSERT INTO stock_log (book_id, old_stock, new_stock)
   VALUES (NEW.book_id, current_stock + NEW.quantity, current_stock);
 END$$
+DELIMITER ;
+
+CREATE TABLE user_registration_log (
+    log_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT,
+    name VARCHAR(100),
+    role ENUM('Admin', 'Staff', 'Customer') DEFAULT 'Customer',
+    registered_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+DELIMITER $$
+CREATE TRIGGER log_user_registration
+AFTER INSERT ON users
+FOR EACH ROW
+BEGIN
+    INSERT INTO user_registration_log (user_id, name, role)
+    VALUES (NEW.user_id, NEW.name, NEW.role);
+END $$
+DELIMITER ;
+
+DELIMITER $$
+CREATE TRIGGER prevent_negative_stock
+BEFORE UPDATE ON books
+FOR EACH ROW
+BEGIN
+    IF NEW.stock_quantity < 0 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Stock cannot be negative.';
+    END IF;
+END $$
+DELIMITER ;
+
+CREATE TABLE cart_deletion_log (
+    log_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT,
+    book_id INT,
+    quantity INT,
+    deleted_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+DELIMITER $$
+CREATE TRIGGER log_deleted_cart_items
+AFTER DELETE ON cart_items
+FOR EACH ROW
+BEGIN
+    INSERT INTO cart_deletion_log (user_id, book_id, quantity)
+    VALUES (OLD.user_id, OLD.book_id, OLD.quantity);
+END $$
+DELIMITER ;
+
+CREATE TABLE role_change_log (
+    log_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT,
+    old_role ENUM('Admin', 'Staff', 'Customer'),
+    new_role ENUM('Admin', 'Staff', 'Customer'),
+    changed_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+DELIMITER $$
+CREATE TRIGGER track_user_role_change
+AFTER UPDATE ON users
+FOR EACH ROW
+BEGIN
+    IF OLD.role != NEW.role THEN
+        INSERT INTO role_change_log (user_id, old_role, new_role)
+        VALUES (NEW.user_id, OLD.role, NEW.role);
+    END IF;
+END $$
+DELIMITER ;
+
+DELIMITER $$
+CREATE TRIGGER auto_set_default_stock
+BEFORE INSERT ON books
+FOR EACH ROW
+BEGIN
+    IF NEW.stock_quantity <= 0 THEN
+        SET NEW.stock_quantity = 1;
+    END IF;
+END $$
+DELIMITER ;
+
+DELIMITER $$
+CREATE TRIGGER prevent_zero_order_total
+BEFORE INSERT ON orders
+FOR EACH ROW
+BEGIN
+    IF NEW.total_amount <= 0 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Order total must be greater than zero.';
+    END IF;
+END $$
+DELIMITER ;
+
+CREATE TABLE book_deletion_log (
+    log_id INT AUTO_INCREMENT PRIMARY KEY,
+    book_id INT,
+    title VARCHAR(200),
+    deleted_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+DELIMITER $$
+CREATE TRIGGER log_book_deletion
+BEFORE DELETE ON books
+FOR EACH ROW
+BEGIN
+    INSERT INTO book_deletion_log (book_id, title)
+    VALUES (OLD.book_id, OLD.title);
+END $$
+DELIMITER ;
+
+DELIMITER $$
+CREATE TRIGGER update_order_status_after_payment
+AFTER INSERT ON transaction_logs
+FOR EACH ROW
+BEGIN
+    IF NEW.payment_status = 'Paid' THEN
+        UPDATE orders
+        SET status = 'Paid'
+        WHERE order_id = NEW.order_id;
+    END IF;
+END $$
 DELIMITER ;
