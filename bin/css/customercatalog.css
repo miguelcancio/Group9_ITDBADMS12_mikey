@@ -1,20 +1,4 @@
-# Panel colors
-panel.header.bg = #ffffff
-panel.main.bg = #f9f9f9
-panel.card.bg = #ffffff
-
-# Text
-label.title.font = Georgia-BOLD-18
-label.genre.font = Georgia-ITALIC-14
-label.default.font = Helvetica-PLAIN-13
-label.title.color = #222222
-label.genre.color = #666666
-label.default.color = #000000
-
-# Buttons
-button.bg = #8B0000
+button.bg = #003059
 button.fg = #ffffff
-button.font = Helvetica-BOLD-13
-
-# Borders
-card.border.color = #cccccc
+button.font = SansSerif-BOLD-12
+header.font = SansSerif-BOLD-12
