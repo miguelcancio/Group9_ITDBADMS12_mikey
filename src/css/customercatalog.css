@@ -1,4 +1,54 @@
-button.bg = #003059
-button.fg = #ffffff
-button.font = SansSerif-BOLD-12
-header.font = SansSerif-BOLD-12
+button.border {
+    border-radius: 30px;
+    border: none;
+    padding: 8px 16px;
+}
+
+button:hover {
+    background-color: #004b87;
+    cursor: pointer;
+}
+
+.card {
+    background-color: #ffffff;
+    border-radius: 16px;
+    border: 1px solid #e0e0e0;
+    padding: 12px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+    transform: scale(1.02);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    cursor: pointer;
+}
+
+.label.title {
+    font-family: "Segoe UI", sans-serif;
+    font-size: 15px;
+    font-weight: bold;
+    color: #333333;
+}
+
+.label.genre, .label.stock {
+    font-family: "Segoe UI", sans-serif;
+    font-size: 12px;
+    color: #555555;
+}
+
+.label.price {
+    font-family: "Segoe UI", sans-serif;
+    font-size: 13px;
+    color: #c0722c;
+}
+
+button.round {
+    background-color: #ffffff;
+    color: #000000;
+    font-family: "Segoe UI", sans-serif;
+    font-size: 13px;
+    border-radius: 30px;
+    padding: 8px 20px;
+    border: none;
+}

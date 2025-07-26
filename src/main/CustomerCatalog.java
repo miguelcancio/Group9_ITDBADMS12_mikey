@@ -20,7 +20,7 @@ public class CustomerCatalog extends JFrame {
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
-        getContentPane().setBackground(new Color(0xfffdd6));
+        getContentPane().setBackground(new Color(0xf4f6fa)); // new background
 
         StyleLoader style = new StyleLoader("src/css/customercatalog.css");
 
@@ -29,7 +29,7 @@ public class CustomerCatalog extends JFrame {
         topPanel.setBackground(new Color(0x003059));
         topPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
 
-        JLabel title = new JLabel("BookMart");
+        JLabel title = new JLabel("📘 BookMart");
         title.setFont(style.getFont("button.font"));
         title.setForeground(Color.WHITE);
         topPanel.add(title, BorderLayout.WEST);
@@ -43,14 +43,18 @@ public class CustomerCatalog extends JFrame {
         currencySelector = new JComboBox<>(new String[]{"PHP", "USD", "KRW"});
         searchField = new JTextField(15);
         JButton searchBtn = new JButton("Search");
+        
+     // Apply oblong/pill styles to key buttons
+        style.applyStyle(searchBtn, "round");
+        style.applyStyle(cartBtn, "round");
+        style.applyStyle(ordersBtn, "round");
+        style.applyStyle(logoutBtn, "round");
+
 
         JButton[] rightButtons = {cartBtn, ordersBtn, logoutBtn, searchBtn};
         for (JButton btn : rightButtons) {
-            btn.setBackground(style.getColor("button.bg"));
-            btn.setForeground(style.getColor("button.fg"));
-            btn.setFont(style.getFont("button.font"));
-            btn.setFocusPainted(false);
-            btn.setBorder(style.getRoundedBorder(30)); // 👈 oblong
+        	style.applyStyle(btn, "round");
+
         }
 
         JLabel currencyLabel = new JLabel("Currency:");
@@ -69,15 +73,17 @@ public class CustomerCatalog extends JFrame {
         add(topPanel, BorderLayout.NORTH);
 
         // Book Cards Panel
-        bookPanel = new JPanel(new GridLayout(0, 3, 15, 15));
-        bookPanel.setBorder(new EmptyBorder(15, 15, 15, 15));
-        bookPanel.setBackground(new Color(0xfbdeb7));
+        bookPanel = new JPanel(new GridLayout(0, 3, 20, 20));
+        bookPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
+        bookPanel.setBackground(new Color(0xf4f6fa));
         JScrollPane scrollPane = new JScrollPane(bookPanel);
+        scrollPane.getViewport().setBackground(new Color(0xf4f6fa));
         add(scrollPane, BorderLayout.CENTER);
 
         // Bottom Panel
-        JPanel bottomPanel = new JPanel();
-        bottomPanel.setBackground(new Color(0xfbdeb7));
+        JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        bottomPanel.setBackground(new Color(0xf4f6fa));
+        bottomPanel.setBorder(new EmptyBorder(10, 0, 10, 0));
 
         viewDetailsBtn = new JButton("View Details");
         addToCartBtn = new JButton("Add to Cart");
@@ -184,16 +190,18 @@ public class CustomerCatalog extends JFrame {
                         Graphics2D g2 = (Graphics2D) g;
                         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                         g2.setColor(getBackground());
-                        g2.fillRoundRect(0, 0, getWidth(), getHeight(), 20, 20);
+                        g2.fillRoundRect(0, 0, getWidth(), getHeight(), 16, 16);
                     }
                 };
 
                 card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
-                card.setBorder(new EmptyBorder(10, 10, 10, 10));
+                card.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(new Color(0xe0e0e0)),
+                        new EmptyBorder(10, 10, 10, 10)));
                 card.setBackground(Color.WHITE);
 
-                JLabel titleLbl = new JLabel(title, SwingConstants.CENTER);
-                titleLbl.setFont(new Font("SansSerif", Font.BOLD, 16));
+                JLabel titleLbl = new JLabel("<html><b>" + title + "</b></html>");
+                titleLbl.setFont(new Font("SansSerif", Font.BOLD, 15));
                 titleLbl.setAlignmentX(Component.CENTER_ALIGNMENT);
 
                 JLabel genreLbl = new JLabel("Genre: " + genre);
@@ -202,17 +210,19 @@ public class CustomerCatalog extends JFrame {
 
                 JLabel priceLbl = new JLabel("Price: " + price + " " + currency);
                 priceLbl.setForeground(new Color(0xc0722c));
+                priceLbl.setFont(new Font("SansSerif", Font.BOLD, 12));
                 priceLbl.setAlignmentX(Component.CENTER_ALIGNMENT);
 
                 JLabel stockLbl = new JLabel("Stock: " + stock);
+                stockLbl.setFont(new Font("SansSerif", Font.PLAIN, 12));
                 stockLbl.setAlignmentX(Component.CENTER_ALIGNMENT);
 
                 card.add(titleLbl);
-                card.add(Box.createVerticalStrut(5));
+                card.add(Box.createVerticalStrut(6));
                 card.add(genreLbl);
-                card.add(Box.createVerticalStrut(5));
+                card.add(Box.createVerticalStrut(6));
                 card.add(priceLbl);
-                card.add(Box.createVerticalStrut(5));
+                card.add(Box.createVerticalStrut(6));
                 card.add(stockLbl);
 
                 card.addMouseListener(new java.awt.event.MouseAdapter() {
@@ -231,4 +241,6 @@ public class CustomerCatalog extends JFrame {
         bookPanel.revalidate();
         bookPanel.repaint();
     }
+
+
 }
