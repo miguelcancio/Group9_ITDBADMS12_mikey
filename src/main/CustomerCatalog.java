@@ -62,6 +62,7 @@ public class CustomerCatalog extends JFrame {
         currencyLabel.setFont(style.getFont("button.font"));
 
         rightPanel.add(currencyLabel);
+        rightPanel.add(Box.createHorizontalStrut(8)); // Add spacing
         rightPanel.add(currencySelector);
         rightPanel.add(searchField);
         rightPanel.add(searchBtn);
