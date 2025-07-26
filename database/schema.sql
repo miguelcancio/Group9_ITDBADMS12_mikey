@@ -436,9 +436,13 @@ BEGIN
     DECLARE adminRole VARCHAR(20);
     SELECT role INTO adminRole FROM users WHERE user_id = admin_user_id;
     IF adminRole = 'Admin' THEN
-        SELECT o.*, c.currency_code
+        SELECT o.*, c.currency_code,
+               GROUP_CONCAT(DISTINCT b.title ORDER BY b.title SEPARATOR ', ') AS book_titles
         FROM orders o
-        JOIN currencies c ON o.currency_id = c.currency_id;
+        JOIN currencies c ON o.currency_id = c.currency_id
+        LEFT JOIN order_items oi ON o.order_id = oi.order_id
+        LEFT JOIN books b ON oi.book_id = b.book_id
+        GROUP BY o.order_id, o.user_id, o.order_date, o.total_amount, o.currency_id, o.status, c.currency_code;
     ELSE
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Unauthorized: Only admins can view all orders.';
     END IF;
