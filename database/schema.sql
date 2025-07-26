@@ -437,7 +437,7 @@ BEGIN
     SELECT role INTO adminRole FROM users WHERE user_id = admin_user_id;
     IF adminRole = 'Admin' THEN
         SELECT o.*, c.currency_code,
-               GROUP_CONCAT(DISTINCT b.title ORDER BY b.title SEPARATOR ', ') AS book_titles
+               GROUP_CONCAT(DISTINCT CONCAT(b.title, ' (', oi.quantity, ')') ORDER BY b.title SEPARATOR ', ') AS book_list
         FROM orders o
         JOIN currencies c ON o.currency_id = c.currency_id
         LEFT JOIN order_items oi ON o.order_id = oi.order_id
