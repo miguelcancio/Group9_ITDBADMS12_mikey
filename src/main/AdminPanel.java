@@ -139,7 +139,7 @@ public class AdminPanel extends JFrame {
     // ORDERS TAB
     private JPanel createOrderPanel() {
         JPanel panel = new JPanel(new BorderLayout());
-        orderTableModel = new DefaultTableModel(new String[]{"OrderID", "UserID", "Date", "Amount", "Currency", "Status"}, 0);
+        orderTableModel = new DefaultTableModel(new String[]{"OrderID", "UserID", "Date", "Amount", "Currency", "Status", "Book Titles"}, 0);
         JTable table = new JTable(orderTableModel);
         loadOrders();
         panel.add(new JScrollPane(table), BorderLayout.CENTER);
@@ -150,7 +150,7 @@ public class AdminPanel extends JFrame {
         orderTableModel.setRowCount(0);
         List<AdminService.OrderInfo> orders = adminService.getAllOrders(adminUserId);
         for (AdminService.OrderInfo o : orders) {
-            orderTableModel.addRow(new Object[]{o.orderId, o.userId, o.orderDate, o.totalAmount, o.currencyCode, o.status});
+            orderTableModel.addRow(new Object[]{o.orderId, o.userId, o.orderDate, o.totalAmount, o.currencyCode, o.status, o.bookTitles});
         }
     }
 

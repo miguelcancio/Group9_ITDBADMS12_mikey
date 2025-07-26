@@ -123,7 +123,8 @@ public class AdminService {
                     rs.getTimestamp("order_date"),
                     rs.getDouble("total_amount"),
                     rs.getString("currency_code"),
-                    rs.getString("status")
+                    rs.getString("status"),
+                    rs.getString("book_titles")
                 ));
             }
         } catch (SQLException e) {
@@ -216,13 +217,15 @@ public class AdminService {
         public final double totalAmount;
         public final String currencyCode;
         public final String status;
-        public OrderInfo(int orderId, int userId, Timestamp orderDate, double totalAmount, String currencyCode, String status) {
+        public final String bookTitles;
+        public OrderInfo(int orderId, int userId, Timestamp orderDate, double totalAmount, String currencyCode, String status, String bookTitles) {
             this.orderId = orderId;
             this.userId = userId;
             this.orderDate = orderDate;
             this.totalAmount = totalAmount;
             this.currencyCode = currencyCode;
             this.status = status;
+            this.bookTitles = bookTitles;
         }
     }
 
