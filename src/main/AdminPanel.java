@@ -186,7 +186,14 @@ public class AdminPanel extends JFrame {
         JTable table = new JTable(userTableModel);
         loadUsers();
 
+        JPanel btnPanel = new JPanel();
         JButton changeRoleBtn = new JButton("Change Role");
+        JButton viewOrdersBtn = new JButton("View User Orders");
+        JButton deleteUserBtn = new JButton("Delete User");
+        btnPanel.add(changeRoleBtn);
+        btnPanel.add(viewOrdersBtn);
+        btnPanel.add(deleteUserBtn);
+
         changeRoleBtn.addActionListener(e -> {
             int row = table.getSelectedRow();
             if (row >= 0) {
@@ -206,8 +213,45 @@ public class AdminPanel extends JFrame {
                 JOptionPane.showMessageDialog(this, "Select a user to change role.");
             }
         });
+
+        viewOrdersBtn.addActionListener(e -> {
+            int row = table.getSelectedRow();
+            if (row >= 0) {
+                int userId = (int) userTableModel.getValueAt(row, 0);
+                String userName = (String) userTableModel.getValueAt(row, 1);
+                showUserOrderHistory(userId, userName);
+            } else {
+                JOptionPane.showMessageDialog(this, "Select a user to view order history.");
+            }
+        });
+
+        deleteUserBtn.addActionListener(e -> {
+            int row = table.getSelectedRow();
+            if (row >= 0) {
+                int userId = (int) userTableModel.getValueAt(row, 0);
+                String userName = (String) userTableModel.getValueAt(row, 1);
+                // Prevent admin from deleting themselves
+                if (userId == adminUserId) {
+                    JOptionPane.showMessageDialog(this, "You cannot delete your own account.", "Warning", JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+                int confirm = JOptionPane.showConfirmDialog(this, "Are you sure you want to delete user '" + userName + "'?", "Confirm Delete", JOptionPane.YES_NO_OPTION);
+                if (confirm == JOptionPane.YES_OPTION) {
+                    boolean ok = adminService.deleteUser(adminUserId, userId);
+                    if (ok) {
+                        JOptionPane.showMessageDialog(this, "User deleted successfully.");
+                        loadUsers();
+                    } else {
+                        JOptionPane.showMessageDialog(this, "Failed to delete user.", "Error", JOptionPane.ERROR_MESSAGE);
+                    }
+                }
+            } else {
+                JOptionPane.showMessageDialog(this, "Select a user to delete.");
+            }
+        });
+
         panel.add(new JScrollPane(table), BorderLayout.CENTER);
-        panel.add(changeRoleBtn, BorderLayout.SOUTH);
+        panel.add(btnPanel, BorderLayout.SOUTH);
         return panel;
     }
 
@@ -266,5 +310,27 @@ public class AdminPanel extends JFrame {
                 currency.exchangeRate
             });
         }
+    }
+
+    // Add this method to display user order history in a dialog
+    private void showUserOrderHistory(int userId, String userName) {
+        java.util.List<AdminService.OrderInfo> orders = adminService.getUserOrderHistory(adminUserId, userId);
+        StringBuilder sb = new StringBuilder();
+        sb.append("Order History for ").append(userName).append(":\n\n");
+        if (orders.isEmpty()) {
+            sb.append("No orders found.");
+        } else {
+            sb.append(String.format("%-10s %-20s %-10s %-10s %-10s %-40s\n", "OrderID", "Date", "Amount", "Currency", "Status", "Books Ordered"));
+            for (AdminService.OrderInfo o : orders) {
+                sb.append(String.format("%-10d %-20s %-10.2f %-10s %-10s %-40s\n",
+                    o.orderId, o.orderDate, o.totalAmount, o.currencyCode, o.status, o.bookList != null ? o.bookList : ""));
+            }
+        }
+        JTextArea textArea = new JTextArea(sb.toString());
+        textArea.setEditable(false);
+        textArea.setFont(new java.awt.Font("Monospaced", java.awt.Font.PLAIN, 12));
+        JScrollPane scrollPane = new JScrollPane(textArea);
+        scrollPane.setPreferredSize(new java.awt.Dimension(900, 300));
+        JOptionPane.showMessageDialog(this, scrollPane, "User Order History", JOptionPane.INFORMATION_MESSAGE);
     }
 }
