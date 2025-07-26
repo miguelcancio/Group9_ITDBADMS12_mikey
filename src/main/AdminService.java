@@ -266,6 +266,62 @@ public class AdminService {
     }
 
     /**
+     * Gets order history for a specific user (admin only), including book details.
+     * @param adminUserId Admin's user ID
+     * @param targetUserId The user whose orders to fetch
+     * @return List of OrderInfo objects
+     */
+    public List<OrderInfo> getUserOrderHistory(int adminUserId, int targetUserId) {
+        List<OrderInfo> orders = new ArrayList<>();
+        try (Connection conn = DBConnection.getConnection()) {
+            String sql = "SELECT o.order_id, o.order_date, o.total_amount, c.currency_code, o.status, " +
+                         "GROUP_CONCAT(CONCAT(b.title, ' (', oi.quantity, ')') ORDER BY b.title SEPARATOR ', ') AS book_list " +
+                         "FROM orders o " +
+                         "JOIN currencies c ON o.currency_id = c.currency_id " +
+                         "LEFT JOIN order_items oi ON o.order_id = oi.order_id " +
+                         "LEFT JOIN books b ON oi.book_id = b.book_id " +
+                         "WHERE o.user_id = ? " +
+                         "GROUP BY o.order_id, o.user_id, o.order_date, o.total_amount, o.currency_id, o.status, c.currency_code";
+            PreparedStatement stmt = conn.prepareStatement(sql);
+            stmt.setInt(1, targetUserId);
+            ResultSet rs = stmt.executeQuery();
+            while (rs.next()) {
+                orders.add(new OrderInfo(
+                    rs.getInt("order_id"),
+                    targetUserId,
+                    rs.getTimestamp("order_date"),
+                    rs.getDouble("total_amount"),
+                    rs.getString("currency_code"),
+                    rs.getString("status"),
+                    rs.getString("book_list")
+                ));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return orders;
+    }
+
+    /**
+     * Deletes a user from the system (admin only).
+     * @param adminUserId Admin's user ID
+     * @param targetUserId The user to delete
+     * @return true if successful, false otherwise
+     */
+    public boolean deleteUser(int adminUserId, int targetUserId) {
+        try (Connection conn = DBConnection.getConnection()) {
+            CallableStatement stmt = conn.prepareCall("{CALL removeUsers(?)}");
+            stmt.setInt(1, targetUserId);
+            stmt.executeUpdate();
+            logAdminAction(conn, adminUserId, "DELETE_USER", "Deleted user ID: " + targetUserId);
+            return true;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    /**
      * Logs an admin action to the admin_action_log table.
      * @param conn Active SQL connection
      * @param adminUserId Admin's user ID

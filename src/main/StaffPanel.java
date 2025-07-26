@@ -22,6 +22,7 @@ public class StaffPanel extends JFrame {
     public StaffPanel() {
         setTitle("👨‍💼 Staff Dashboard - BookMart");
         setSize(950, 700);
+        setMinimumSize(new Dimension(800, 600));
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
@@ -34,12 +35,13 @@ public class StaffPanel extends JFrame {
         topPanel.setBackground(new Color(0x003059));
         topPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
 
-        JLabel title = new JLabel("📘 BookMart - Staff Panel");
+        JLabel title = new JLabel("<html>📘 BookMart<br>Staff Panel</html>");
         title.setFont(style.getFont("button.font"));
         title.setForeground(Color.WHITE);
+        title.setHorizontalAlignment(SwingConstants.LEFT);
         topPanel.add(title, BorderLayout.WEST);
 
-        JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 2));
         rightPanel.setOpaque(false);
 
         JButton cartBtn = new JButton("Cart");
@@ -48,6 +50,12 @@ public class StaffPanel extends JFrame {
         currencySelector = new JComboBox<>(new String[]{"PHP", "USD", "KRW"});
         searchField = new JTextField(15);
         JButton searchBtn = new JButton("Search");
+        
+        // Set minimum sizes to prevent truncation
+        searchField.setMinimumSize(new Dimension(100, 25));
+        searchField.setPreferredSize(new Dimension(150, 25));
+        currencySelector.setMinimumSize(new Dimension(80, 25));
+        currencySelector.setPreferredSize(new Dimension(80, 25));
         
         // Staff-specific buttons
         addBookBtn = new JButton("➕ Add Book");
@@ -127,6 +135,15 @@ public class StaffPanel extends JFrame {
 
         // Load initial books
         loadBooks("", "PHP");
+        
+        // Add window resize listener
+        addComponentListener(new java.awt.event.ComponentAdapter() {
+            @Override
+            public void componentResized(java.awt.event.ComponentEvent e) {
+                topPanel.revalidate();
+                topPanel.repaint();
+            }
+        });
     }
 
     private void loadBooks(String keyword, String currency) {
