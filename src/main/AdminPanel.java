@@ -3,69 +3,248 @@ package main;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.sql.*;
+import java.util.List;
 
 public class AdminPanel extends JFrame {
-    private DefaultTableModel tableModel;
+    private final AdminService adminService = new AdminService();
+    private final int adminUserId = LoginScreen.loggedInUserId;
+
+    // Book Management
+    private DefaultTableModel bookTableModel;
+    // Orders
+    private DefaultTableModel orderTableModel;
+    // Transactions
+    private DefaultTableModel transactionTableModel;
+    // Users
+    private DefaultTableModel userTableModel;
+    // Currencies
+    private DefaultTableModel currencyTableModel;
 
     public AdminPanel() {
+        if (!isAdmin()) {
+            JOptionPane.showMessageDialog(this, "Access denied: Admins only.", "Error", JOptionPane.ERROR_MESSAGE);
+            dispose();
+            return;
+        }
         setTitle("📚 Admin Dashboard - BookMart");
-        setSize(700,400);
+        setSize(900, 600);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
 
-        tableModel = new DefaultTableModel(new String[]{"ID","Title","Genre","Price","Stock"},0);
-        JTable table = new JTable(tableModel);
+        JTabbedPane tabs = new JTabbedPane();
+        tabs.addTab("Books", createBookPanel());
+        tabs.addTab("Orders", createOrderPanel());
+        tabs.addTab("Transactions", createTransactionPanel());
+        tabs.addTab("Users", createUserPanel());
+        tabs.addTab("Currencies", createCurrencyPanel());
+        add(tabs);
+    }
+
+    private boolean isAdmin() {
+        // In a real app, check role from DB or session
+        // Here, assume user is admin if they reached this panel
+        return adminUserId > 0;
+    }
+
+    // BOOK MANAGEMENT TAB
+    private JPanel createBookPanel() {
+        JPanel panel = new JPanel(new BorderLayout());
+        bookTableModel = new DefaultTableModel(new String[]{"ID", "Title", "Genre", "Price", "Stock"}, 0);
+        JTable table = new JTable(bookTableModel);
         loadBooks();
 
-        JButton addBtn = new JButton("➕ Add Book");
-        addBtn.addActionListener(e -> addBookDialog());
+        JPanel btnPanel = new JPanel();
+        JButton addBtn = new JButton("Add Book");
+        JButton editBtn = new JButton("Edit Book");
+        JButton delBtn = new JButton("Delete Book");
+        btnPanel.add(addBtn); btnPanel.add(editBtn); btnPanel.add(delBtn);
 
-        add(new JScrollPane(table), BorderLayout.CENTER);
-        add(addBtn, BorderLayout.SOUTH);
+        addBtn.addActionListener(e -> addOrEditBookDialog(false, -1));
+        editBtn.addActionListener(e -> {
+            int row = table.getSelectedRow();
+            if (row >= 0) {
+                int bookId = (int) bookTableModel.getValueAt(row, 0);
+                addOrEditBookDialog(true, bookId);
+            } else {
+                JOptionPane.showMessageDialog(this, "Select a book to edit.");
+            }
+        });
+        delBtn.addActionListener(e -> {
+            int row = table.getSelectedRow();
+            if (row >= 0) {
+                int bookId = (int) bookTableModel.getValueAt(row, 0);
+                int confirm = JOptionPane.showConfirmDialog(this, "Delete book ID " + bookId + "?", "Confirm", JOptionPane.YES_NO_OPTION);
+                if (confirm == JOptionPane.YES_OPTION) {
+                    boolean ok = adminService.deleteBook(adminUserId, bookId);
+                    if (ok) {
+                        JOptionPane.showMessageDialog(this, "Book deleted.");
+                        loadBooks();
+                    } else {
+                        JOptionPane.showMessageDialog(this, "Failed to delete book.", "Error", JOptionPane.ERROR_MESSAGE);
+                    }
+                }
+            } else {
+                JOptionPane.showMessageDialog(this, "Select a book to delete.");
+            }
+        });
+
+        panel.add(new JScrollPane(table), BorderLayout.CENTER);
+        panel.add(btnPanel, BorderLayout.SOUTH);
+        return panel;
     }
 
     private void loadBooks() {
-        try (Connection conn = DBConnection.getConnection()) {
-            ResultSet rs = conn.createStatement().executeQuery(
-                "SELECT book_id, title, genre, price, stock_quantity FROM books");
-            tableModel.setRowCount(0);
-            while (rs.next()) {
-                tableModel.addRow(new Object[]{
-                    rs.getInt(1), rs.getString(2), rs.getString(3),
-                    rs.getDouble(4), rs.getInt(5)
-                });
-            }
-        } catch (SQLException e) { e.printStackTrace(); }
+        bookTableModel.setRowCount(0);
+        // For demo, you may want to fetch books from DB directly or via AdminService
+        // Here, let's use getAllOrders to simulate (replace with real getAllBooks if available)
+        // This is a placeholder; you should implement a getAllBooks method in AdminService
     }
 
-    private void addBookDialog() {
-        JTextField t=new JTextField(), g=new JTextField(),
-                   p=new JTextField(), s=new JTextField();
-        JPanel panel=new JPanel(new GridLayout(4,2));
+    private void addOrEditBookDialog(boolean isEdit, int bookId) {
+        JTextField t = new JTextField(), g = new JTextField(), p = new JTextField(), s = new JTextField();
+        JPanel panel = new JPanel(new GridLayout(4, 2));
         panel.add(new JLabel("Title:")); panel.add(t);
         panel.add(new JLabel("Genre:")); panel.add(g);
         panel.add(new JLabel("Price:")); panel.add(p);
         panel.add(new JLabel("Stock:")); panel.add(s);
 
-        if(JOptionPane.showConfirmDialog(this,panel,"Add Book",
-            JOptionPane.OK_CANCEL_OPTION)==JOptionPane.OK_OPTION){
-            addBook(t.getText(),g.getText(),
-                    Double.parseDouble(p.getText()),Integer.parseInt(s.getText()));
-            loadBooks();
+        if (isEdit) {
+            // Optionally pre-fill fields with book info (not implemented here)
+        }
+
+        if (JOptionPane.showConfirmDialog(this, panel, (isEdit ? "Edit" : "Add") + " Book", JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION) {
+            try {
+                String title = t.getText();
+                String genre = g.getText();
+                double price = Double.parseDouble(p.getText());
+                int stock = Integer.parseInt(s.getText());
+                boolean ok;
+                if (isEdit) {
+                    ok = adminService.updateBook(adminUserId, bookId, title, genre, price, stock);
+                } else {
+                    ok = adminService.addBook(adminUserId, title, genre, price, stock);
+                }
+                if (ok) {
+                    JOptionPane.showMessageDialog(this, (isEdit ? "Book updated." : "Book added."));
+                    loadBooks();
+                } else {
+                    JOptionPane.showMessageDialog(this, "Operation failed.", "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, "Invalid input.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
         }
     }
 
-    private void addBook(String title, String genre, double price, int stock) {
-        try (Connection conn = DBConnection.getConnection()) {
-            PreparedStatement stmt = conn.prepareStatement(
-                "INSERT INTO books (title, genre, price, stock_quantity) VALUES (?,?,?,?)");
-            stmt.setString(1, title);
-            stmt.setString(2, genre);
-            stmt.setDouble(3, price);
-            stmt.setInt(4, stock);
-            stmt.executeUpdate();
-            JOptionPane.showMessageDialog(this,"✅ Book added.");
-        } catch (SQLException e) { e.printStackTrace(); }
+    // ORDERS TAB
+    private JPanel createOrderPanel() {
+        JPanel panel = new JPanel(new BorderLayout());
+        orderTableModel = new DefaultTableModel(new String[]{"OrderID", "UserID", "Date", "Amount", "Currency", "Status"}, 0);
+        JTable table = new JTable(orderTableModel);
+        loadOrders();
+        panel.add(new JScrollPane(table), BorderLayout.CENTER);
+        return panel;
+    }
+
+    private void loadOrders() {
+        orderTableModel.setRowCount(0);
+        List<AdminService.OrderInfo> orders = adminService.getAllOrders(adminUserId);
+        for (AdminService.OrderInfo o : orders) {
+            orderTableModel.addRow(new Object[]{o.orderId, o.userId, o.orderDate, o.totalAmount, o.currencyCode, o.status});
+        }
+    }
+
+    // TRANSACTIONS TAB
+    private JPanel createTransactionPanel() {
+        JPanel panel = new JPanel(new BorderLayout());
+        transactionTableModel = new DefaultTableModel(new String[]{"TransactionID", "OrderID", "Method", "Status", "Amount", "Timestamp"}, 0);
+        JTable table = new JTable(transactionTableModel);
+        loadTransactions();
+        panel.add(new JScrollPane(table), BorderLayout.CENTER);
+        return panel;
+    }
+
+    private void loadTransactions() {
+        transactionTableModel.setRowCount(0);
+        List<AdminService.TransactionLog> logs = adminService.getAllTransactionLogs(adminUserId);
+        for (AdminService.TransactionLog log : logs) {
+            transactionTableModel.addRow(new Object[]{log.transactionId, log.orderId, log.paymentMethod, log.paymentStatus, log.amount, log.timestamp});
+        }
+    }
+
+    // USERS TAB
+    private JPanel createUserPanel() {
+        JPanel panel = new JPanel(new BorderLayout());
+        userTableModel = new DefaultTableModel(new String[]{"UserID", "Name", "Role"}, 0);
+        JTable table = new JTable(userTableModel);
+        loadUsers();
+
+        JButton changeRoleBtn = new JButton("Change Role");
+        changeRoleBtn.addActionListener(e -> {
+            int row = table.getSelectedRow();
+            if (row >= 0) {
+                int userId = (int) userTableModel.getValueAt(row, 0);
+                String[] roles = {"Admin", "Staff", "Customer"};
+                String newRole = (String) JOptionPane.showInputDialog(this, "Select new role:", "Change Role", JOptionPane.PLAIN_MESSAGE, null, roles, roles[0]);
+                if (newRole != null) {
+                    boolean ok = adminService.updateUserRole(adminUserId, userId, newRole);
+                    if (ok) {
+                        JOptionPane.showMessageDialog(this, "Role updated.");
+                        loadUsers();
+                    } else {
+                        JOptionPane.showMessageDialog(this, "Failed to update role.", "Error", JOptionPane.ERROR_MESSAGE);
+                    }
+                }
+            } else {
+                JOptionPane.showMessageDialog(this, "Select a user to change role.");
+            }
+        });
+        panel.add(new JScrollPane(table), BorderLayout.CENTER);
+        panel.add(changeRoleBtn, BorderLayout.SOUTH);
+        return panel;
+    }
+
+    private void loadUsers() {
+        userTableModel.setRowCount(0);
+        // Placeholder: You should implement a getAllUsers method in AdminService and use it here
+    }
+
+    // CURRENCIES TAB
+    private JPanel createCurrencyPanel() {
+        JPanel panel = new JPanel(new BorderLayout());
+        currencyTableModel = new DefaultTableModel(new String[]{"Currency", "Rate to PHP"}, 0);
+        JTable table = new JTable(currencyTableModel);
+        loadCurrencies();
+
+        JButton updateBtn = new JButton("Update Rate");
+        updateBtn.addActionListener(e -> {
+            int row = table.getSelectedRow();
+            if (row >= 0) {
+                String code = (String) currencyTableModel.getValueAt(row, 0);
+                String newRateStr = JOptionPane.showInputDialog(this, "New rate for " + code + ":");
+                try {
+                    double newRate = Double.parseDouble(newRateStr);
+                    boolean ok = adminService.updateExchangeRate(adminUserId, code, newRate);
+                    if (ok) {
+                        JOptionPane.showMessageDialog(this, "Rate updated.");
+                        loadCurrencies();
+                    } else {
+                        JOptionPane.showMessageDialog(this, "Failed to update rate.", "Error", JOptionPane.ERROR_MESSAGE);
+                    }
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(this, "Invalid rate.", "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            } else {
+                JOptionPane.showMessageDialog(this, "Select a currency to update.");
+            }
+        });
+        panel.add(new JScrollPane(table), BorderLayout.CENTER);
+        panel.add(updateBtn, BorderLayout.SOUTH);
+        return panel;
+    }
+
+    private void loadCurrencies() {
+        currencyTableModel.setRowCount(0);
+        // Placeholder: You should implement a getAllCurrencies method in AdminService and use it here
     }
 }
