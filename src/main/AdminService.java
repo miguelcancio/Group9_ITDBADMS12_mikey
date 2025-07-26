@@ -188,6 +188,83 @@ public class AdminService {
     }
 
     /**
+     * Gets all books in the system (admin only).
+     * @param adminUserId Admin's user ID
+     * @return List of BookInfo objects
+     */
+    public List<BookInfo> getAllBooks(int adminUserId) {
+        List<BookInfo> books = new ArrayList<>();
+        try (Connection conn = DBConnection.getConnection()) {
+            // Simple SELECT query to get all books
+            PreparedStatement stmt = conn.prepareStatement(
+                "SELECT book_id, title, genre, price, stock_quantity FROM books ORDER BY book_id"
+            );
+            ResultSet rs = stmt.executeQuery();
+            while (rs.next()) {
+                books.add(new BookInfo(
+                    rs.getInt("book_id"),
+                    rs.getString("title"),
+                    rs.getString("genre"),
+                    rs.getDouble("price"),
+                    rs.getInt("stock_quantity")
+                ));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return books;
+    }
+
+    /**
+     * Gets all users in the system (admin only).
+     * @param adminUserId Admin's user ID
+     * @return List of UserInfo objects
+     */
+    public List<UserInfo> getAllUsers(int adminUserId) {
+        List<UserInfo> users = new ArrayList<>();
+        try (Connection conn = DBConnection.getConnection()) {
+            PreparedStatement stmt = conn.prepareStatement(
+                "SELECT user_id, name, role FROM users ORDER BY user_id"
+            );
+            ResultSet rs = stmt.executeQuery();
+            while (rs.next()) {
+                users.add(new UserInfo(
+                    rs.getInt("user_id"),
+                    rs.getString("name"),
+                    rs.getString("role")
+                ));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return users;
+    }
+
+    /**
+     * Gets all currencies in the system (admin only).
+     * @param adminUserId Admin's user ID
+     * @return List of CurrencyInfo objects
+     */
+    public List<CurrencyInfo> getAllCurrencies(int adminUserId) {
+        List<CurrencyInfo> currencies = new ArrayList<>();
+        try (Connection conn = DBConnection.getConnection()) {
+            PreparedStatement stmt = conn.prepareStatement(
+                "SELECT currency_code, exchange_rate_to_php FROM currencies ORDER BY currency_code"
+            );
+            ResultSet rs = stmt.executeQuery();
+            while (rs.next()) {
+                currencies.add(new CurrencyInfo(
+                    rs.getString("currency_code"),
+                    rs.getDouble("exchange_rate_to_php")
+                ));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return currencies;
+    }
+
+    /**
      * Logs an admin action to the admin_action_log table.
      * @param conn Active SQL connection
      * @param adminUserId Admin's user ID
@@ -240,6 +317,41 @@ public class AdminService {
             this.paymentStatus = paymentStatus;
             this.amount = amount;
             this.timestamp = timestamp;
+        }
+    }
+
+    public static class BookInfo {
+        public final int bookId;
+        public final String title;
+        public final String genre;
+        public final double price;
+        public final int stockQuantity;
+        public BookInfo(int bookId, String title, String genre, double price, int stockQuantity) {
+            this.bookId = bookId;
+            this.title = title;
+            this.genre = genre;
+            this.price = price;
+            this.stockQuantity = stockQuantity;
+        }
+    }
+
+    public static class UserInfo {
+        public final int userId;
+        public final String name;
+        public final String role;
+        public UserInfo(int userId, String name, String role) {
+            this.userId = userId;
+            this.name = name;
+            this.role = role;
+        }
+    }
+
+    public static class CurrencyInfo {
+        public final String currencyCode;
+        public final double exchangeRate;
+        public CurrencyInfo(String currencyCode, double exchangeRate) {
+            this.currencyCode = currencyCode;
+            this.exchangeRate = exchangeRate;
         }
     }
 

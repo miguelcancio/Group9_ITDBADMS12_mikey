@@ -95,9 +95,16 @@ public class AdminPanel extends JFrame {
 
     private void loadBooks() {
         bookTableModel.setRowCount(0);
-        // For demo, you may want to fetch books from DB directly or via AdminService
-        // Here, let's use getAllOrders to simulate (replace with real getAllBooks if available)
-        // This is a placeholder; you should implement a getAllBooks method in AdminService
+        List<AdminService.BookInfo> books = adminService.getAllBooks(adminUserId);
+        for (AdminService.BookInfo book : books) {
+            bookTableModel.addRow(new Object[]{
+                book.bookId,
+                book.title,
+                book.genre,
+                book.price,
+                book.stockQuantity
+            });
+        }
     }
 
     private void addOrEditBookDialog(boolean isEdit, int bookId) {
@@ -206,7 +213,14 @@ public class AdminPanel extends JFrame {
 
     private void loadUsers() {
         userTableModel.setRowCount(0);
-        // Placeholder: You should implement a getAllUsers method in AdminService and use it here
+        List<AdminService.UserInfo> users = adminService.getAllUsers(adminUserId);
+        for (AdminService.UserInfo user : users) {
+            userTableModel.addRow(new Object[]{
+                user.userId,
+                user.name,
+                user.role
+            });
+        }
     }
 
     // CURRENCIES TAB
@@ -245,6 +259,12 @@ public class AdminPanel extends JFrame {
 
     private void loadCurrencies() {
         currencyTableModel.setRowCount(0);
-        // Placeholder: You should implement a getAllCurrencies method in AdminService and use it here
+        List<AdminService.CurrencyInfo> currencies = adminService.getAllCurrencies(adminUserId);
+        for (AdminService.CurrencyInfo currency : currencies) {
+            currencyTableModel.addRow(new Object[]{
+                currency.currencyCode,
+                currency.exchangeRate
+            });
+        }
     }
 }
