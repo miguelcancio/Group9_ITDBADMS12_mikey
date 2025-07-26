@@ -76,8 +76,8 @@ public class LoginScreen extends JFrame {
 
     private void openDashboard(String role) {
         switch(role.toLowerCase()) {
-            case "admin": /*new AdminPanel().setVisible(true);*/ break;
-            case "staff": /*new StaffPanel().setVisible(true);*/ break;
+            case "admin": new AdminPanel().setVisible(true); break;
+            case "staff": new StaffPanel().setVisible(true); break;
             default: new CustomerCatalog().setVisible(true);
         }
     }

@@ -427,3 +427,89 @@ BEGIN
     END IF;
 END $$
 DELIMITER ;
+
+-- ADMIN-SECURED STORED PROCEDURES AND LOGGING --
+
+DELIMITER $$
+CREATE PROCEDURE getAllOrders(IN admin_user_id INT)
+BEGIN
+    DECLARE adminRole VARCHAR(20);
+    SELECT role INTO adminRole FROM users WHERE user_id = admin_user_id;
+    IF adminRole = 'Admin' THEN
+        SELECT o.*, c.currency_code
+        FROM orders o
+        JOIN currencies c ON o.currency_id = c.currency_id;
+    ELSE
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Unauthorized: Only admins can view all orders.';
+    END IF;
+END $$
+DELIMITER ;
+
+DELIMITER $$
+CREATE PROCEDURE getAllTransactionLogs(IN admin_user_id INT)
+BEGIN
+    DECLARE adminRole VARCHAR(20);
+    SELECT role INTO adminRole FROM users WHERE user_id = admin_user_id;
+    IF adminRole = 'Admin' THEN
+        SELECT * FROM transaction_logs;
+    ELSE
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Unauthorized: Only admins can view transaction logs.';
+    END IF;
+END $$
+DELIMITER ;
+
+DELIMITER $$
+CREATE PROCEDURE updateUserRole(IN admin_user_id INT, IN userId INT, IN newRole VARCHAR(20))
+BEGIN
+    DECLARE adminRole VARCHAR(20);
+    SELECT role INTO adminRole FROM users WHERE user_id = admin_user_id;
+    IF adminRole = 'Admin' THEN
+        UPDATE users SET role = newRole WHERE user_id = userId;
+    ELSE
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Unauthorized: Only admins can update user roles.';
+    END IF;
+END $$
+DELIMITER ;
+
+DELIMITER $$
+CREATE PROCEDURE updateBookDetails(
+    IN admin_user_id INT,
+    IN bookId INT,
+    IN title VARCHAR(200),
+    IN genre VARCHAR(100),
+    IN price DECIMAL(10,2),
+    IN stock INT
+)
+BEGIN
+    DECLARE adminRole VARCHAR(20);
+    SELECT role INTO adminRole FROM users WHERE user_id = admin_user_id;
+    IF adminRole = 'Admin' THEN
+        UPDATE books SET title=title, genre=genre, price=price, stock_quantity=stock WHERE book_id=bookId;
+    ELSE
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Unauthorized: Only admins can update book details.';
+    END IF;
+END $$
+DELIMITER ;
+
+DELIMITER $$
+CREATE PROCEDURE updateExchangeRate(IN admin_user_id INT, IN currencyCode VARCHAR(10), IN newRate DECIMAL(10,4))
+BEGIN
+    DECLARE adminRole VARCHAR(20);
+    SELECT role INTO adminRole FROM users WHERE user_id = admin_user_id;
+    IF adminRole = 'Admin' THEN
+        UPDATE currencies SET exchange_rate_to_php = newRate WHERE currency_code = currencyCode;
+    ELSE
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Unauthorized: Only admins can update exchange rates.';
+    END IF;
+END $$
+DELIMITER ;
+
+-- Admin action logging table --
+CREATE TABLE IF NOT EXISTS admin_action_log (
+    log_id INT AUTO_INCREMENT PRIMARY KEY,
+    admin_user_id INT,
+    action VARCHAR(100),
+    details TEXT,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (admin_user_id) REFERENCES users(user_id)
+);
