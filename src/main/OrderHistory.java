@@ -16,7 +16,7 @@ public class OrderHistory extends JFrame {
         setLocationRelativeTo(null);
 
         orderModel = new DefaultTableModel(new String[]{
-            "Order ID", "Date", "Total Price", "Status", "Currency"
+            "Order ID", "Date", "Total Price", "Status", "Currency", "Book Titles"
         }, 0);
         orderTable = new JTable(orderModel);
         JScrollPane scrollPane = new JScrollPane(orderTable);
@@ -42,10 +42,14 @@ public class OrderHistory extends JFrame {
     private void loadOrders() {
         try (Connection conn = DBConnection.getConnection()) {
             String sql = """
-                SELECT o.order_id, o.order_date, o.total_amount, o.status, c.currency_code
+                SELECT o.order_id, o.order_date, o.total_amount, o.status, c.currency_code,
+                       GROUP_CONCAT(DISTINCT b.title ORDER BY b.title SEPARATOR ', ') AS book_titles
                 FROM orders o
                 JOIN currencies c ON o.currency_id = c.currency_id
+                LEFT JOIN order_items oi ON o.order_id = oi.order_id
+                LEFT JOIN books b ON oi.book_id = b.book_id
                 WHERE o.user_id = ?
+                GROUP BY o.order_id, o.order_date, o.total_amount, o.status, c.currency_code
                 ORDER BY o.order_date DESC
             """;
             PreparedStatement stmt = conn.prepareStatement(sql);
@@ -59,7 +63,8 @@ public class OrderHistory extends JFrame {
                     rs.getTimestamp("order_date"),
                     rs.getDouble("total_amount"),
                     rs.getString("status"),
-                    rs.getString("currency_code")
+                    rs.getString("currency_code"),
+                    rs.getString("book_titles")
                 });
             }
         } catch (SQLException e) {
