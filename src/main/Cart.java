@@ -1,7 +1,10 @@
 package main;
 
 import javax.swing.*;
+import javax.swing.border.EmptyBorder;
+import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.JTableHeader;
 import java.awt.*;
 import java.sql.*;
 import java.util.ArrayList;
@@ -10,30 +13,86 @@ public class Cart extends JFrame {
     private DefaultTableModel tableModel;
     private ArrayList<CartItem> cartItems = new ArrayList<>();
     private double total = 0.0;
-    private int selectedCurrencyId = 1; // default: PHP
-    private CustomerCatalog catalog; // Reference to refresh book list
+    private int selectedCurrencyId = 1;
+    private CustomerCatalog catalog;
 
-    // Constructor accepting CustomerCatalog reference
     public Cart(CustomerCatalog catalog) {
         this.catalog = catalog;
 
         setTitle("🛒 Your Cart - BookMart");
-        setSize(600, 400);
+        setSize(700, 450);
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
         setLocationRelativeTo(null);
+        setLayout(new BorderLayout());
+        getContentPane().setBackground(new Color(0xf4f6fa));
 
-        tableModel = new DefaultTableModel(new String[]{"Title", "Qty", "Price", "Subtotal"}, 0);
+        StyleLoader style = new StyleLoader("src/css/customercatalog.css");
+
+     // Unified Header Design
+        JPanel headerPanel = new JPanel();
+        headerPanel.setBackground(new Color(0x003059)); 
+        headerPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
+
+        JLabel title = new JLabel("Your Cart");
+        title.setFont(new Font("Arial", Font.BOLD, 20)); 
+        title.setForeground(Color.WHITE);
+        headerPanel.add(title);
+
+        add(headerPanel, BorderLayout.NORTH);
+
+
+        // Table
+        tableModel = new DefaultTableModel(new String[]{"Title", "Quantity", "Price", "Subtotal"}, 0);
         JTable table = new JTable(tableModel);
-        add(new JScrollPane(table), BorderLayout.CENTER);
+
+        // Set custom header background color
+        JTableHeader tableHeader = table.getTableHeader();
+        tableHeader.setDefaultRenderer(new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value,
+                                                            boolean isSelected, boolean hasFocus, int row, int column) {
+                JLabel label = new JLabel(value.toString());
+                label.setOpaque(true);
+                label.setBackground(Color.decode("#4a90e2")); // Header background
+                label.setForeground(Color.WHITE);             // Header text color
+                label.setFont(new Font("SansSerif", Font.BOLD, 13));
+                label.setHorizontalAlignment(SwingConstants.CENTER);
+                return label;
+            }
+        });
+
+        table.setRowHeight(24);
+        JScrollPane scrollPane = new JScrollPane(table);
+        scrollPane.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+        add(scrollPane, BorderLayout.CENTER);
 
         loadCart();
 
+        // Bottom Panel
+        JPanel bottomPanel = new JPanel(new BorderLayout());
+        bottomPanel.setBorder(new EmptyBorder(15, 15, 15, 15));
+        bottomPanel.setBackground(new Color(0xf4f6fa));
+
+        JLabel totalLabel = new JLabel("Total: ₱ " + String.format("%.2f", total));
+        totalLabel.setFont(new Font("SansSerif", Font.BOLD, 16));
+        totalLabel.setForeground(new Color(0xc0722c));
+
         JButton orderBtn = new JButton("✅ Place Order");
+        orderBtn.setFont(style.getFont("button.font"));
+        orderBtn.setBackground(style.getColor("button.bg"));
+        orderBtn.setForeground(style.getColor("button.fg"));
+        orderBtn.setFocusPainted(false);
+        orderBtn.setBorder(style.getRoundedBorder(30));
+        orderBtn.setPreferredSize(new Dimension(160, 35));
+
         orderBtn.addActionListener(e -> placeOrder());
-        add(orderBtn, BorderLayout.SOUTH);
+
+        bottomPanel.add(totalLabel, BorderLayout.WEST);
+        bottomPanel.add(orderBtn, BorderLayout.EAST);
+
+        add(bottomPanel, BorderLayout.SOUTH);
     }
 
-    // Optional: default constructor (if needed elsewhere)
     public Cart() {
         this(null);
     }
@@ -52,6 +111,7 @@ public class Cart extends JFrame {
             stmt.setInt(1, LoginScreen.loggedInUserId);
             ResultSet rs = stmt.executeQuery();
             tableModel.setRowCount(0);
+
             while (rs.next()) {
                 int bookId = rs.getInt("book_id");
                 String title = rs.getString("title");
@@ -77,12 +137,10 @@ public class Cart extends JFrame {
         try (Connection conn = DBConnection.getConnection()) {
             conn.setAutoCommit(false);
 
-            // Get currency_id of PHP
             PreparedStatement currencyStmt = conn.prepareStatement("SELECT currency_id FROM currencies WHERE currency_code = 'PHP'");
             ResultSet cr = currencyStmt.executeQuery();
             if (cr.next()) selectedCurrencyId = cr.getInt("currency_id");
 
-            // Insert into orders
             PreparedStatement orderStmt = conn.prepareStatement(
                 "INSERT INTO orders (user_id, total_amount, currency_id, status) VALUES (?, ?, ?, 'Pending')",
                 Statement.RETURN_GENERATED_KEYS
@@ -98,7 +156,6 @@ public class Cart extends JFrame {
                 orderId = rs.getInt(1);
             }
 
-            // Insert into order_items
             PreparedStatement itemStmt = conn.prepareStatement(
                 "INSERT INTO order_items (order_id, book_id, quantity, price_each) VALUES (?, ?, ?, ?)"
             );
@@ -111,7 +168,6 @@ public class Cart extends JFrame {
             }
             itemStmt.executeBatch();
 
-            // Deduct stock safely
             PreparedStatement updateStockStmt = conn.prepareStatement(
                 "UPDATE books SET stock_quantity = stock_quantity - ? WHERE book_id = ? AND stock_quantity >= ?"
             );
@@ -130,7 +186,6 @@ public class Cart extends JFrame {
                 }
             }
 
-            // Clear cart
             PreparedStatement clearCartStmt = conn.prepareStatement("DELETE FROM cart_items WHERE user_id = ?");
             clearCartStmt.setInt(1, LoginScreen.loggedInUserId);
             clearCartStmt.executeUpdate();
@@ -139,7 +194,7 @@ public class Cart extends JFrame {
             JOptionPane.showMessageDialog(this, "✅ Order placed!");
 
             if (catalog != null) {
-                catalog.refreshBooks(); // 🔁 Update CustomerCatalog display
+                catalog.refreshBooks();
             }
 
             this.dispose();
@@ -150,7 +205,6 @@ public class Cart extends JFrame {
         }
     }
 
-    // Helper class
     private static class CartItem {
         int bookId;
         int quantity;

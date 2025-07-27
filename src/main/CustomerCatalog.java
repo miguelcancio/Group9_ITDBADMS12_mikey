@@ -11,7 +11,7 @@ public class CustomerCatalog extends JFrame {
     private String currentCurrency = "PHP";
     private int selectedBookId = -1;
     private JPanel bookPanel;
-    private JButton viewDetailsBtn;
+    
     private JButton addToCartBtn;
     private JPanel selectedCard = null; // Track selected card
 
@@ -32,6 +32,7 @@ public class CustomerCatalog extends JFrame {
 
         JLabel title = new JLabel("📘 BookMart");
         title.setFont(style.getFont("button.font"));
+        title.setFont(new Font("Arial", Font.BOLD, 20));
         title.setForeground(Color.WHITE);
         topPanel.add(title, BorderLayout.WEST);
 
@@ -79,10 +80,10 @@ public class CustomerCatalog extends JFrame {
         bottomPanel.setBackground(new Color(0xf4f6fa));
         bottomPanel.setBorder(new EmptyBorder(10, 0, 10, 0));
 
-        viewDetailsBtn = new JButton("View Details");
+ 
         addToCartBtn = new JButton("Add to Cart");
 
-        JButton[] bottomButtons = {viewDetailsBtn, addToCartBtn};
+        JButton[] bottomButtons = {addToCartBtn};
         for (JButton btn : bottomButtons) {
             btn.setBackground(style.getColor("button.bg"));
             btn.setForeground(style.getColor("button.fg"));
@@ -91,10 +92,10 @@ public class CustomerCatalog extends JFrame {
             btn.setBorder(style.getRoundedBorder(30));
         }
 
-        viewDetailsBtn.setEnabled(false);
+        
         addToCartBtn.setEnabled(false);
 
-        bottomPanel.add(viewDetailsBtn);
+        
         bottomPanel.add(addToCartBtn);
         add(bottomPanel, BorderLayout.SOUTH);
 
@@ -125,10 +126,7 @@ public class CustomerCatalog extends JFrame {
             new LoginScreen().setVisible(true);
         });
 
-        viewDetailsBtn.addActionListener(e -> {
-            if (selectedBookId != -1)
-                new BookDetails(selectedBookId, currentCurrency).setVisible(true);
-        });
+
 
         addToCartBtn.addActionListener(e -> {
             if (selectedBookId != -1) {
@@ -177,7 +175,7 @@ public class CustomerCatalog extends JFrame {
         bookPanel.removeAll();
         selectedCard = null;
         selectedBookId = -1;
-        viewDetailsBtn.setEnabled(false);
+        
         addToCartBtn.setEnabled(false);
 
         try (Connection conn = DBConnection.getConnection()) {
@@ -257,7 +255,7 @@ public class CustomerCatalog extends JFrame {
                         selectedCard.setBackground(new Color(0xeaf0fa));
 
                         selectedBookId = bookId;
-                        viewDetailsBtn.setEnabled(true);
+                     
                         addToCartBtn.setEnabled(true);
                     }
                 });

@@ -415,25 +415,41 @@ public class AdminPanel extends JFrame {
     
 
     // USERS TAB
+ // USERS TAB
     private JPanel createUserPanel() {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBackground(StyleLoader1.BG_COLOR);
 
         userTableModel = new DefaultTableModel(new String[]{"User ID", "Name", "Role"}, 0);
-        JTable table = new JTable(userTableModel);
+        JTable table = new JTable(userTableModel) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
+
+        // Table styling
         table.setFillsViewportHeight(true);
         table.setRowHeight(28);
         table.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        table.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 14));
         table.setShowGrid(false);
         table.setIntercellSpacing(new Dimension(0, 0));
+        table.setSelectionBackground(new Color(220, 235, 245));
+
+        // Table Header styling
+        JTableHeader header = table.getTableHeader();
+        header.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        header.setBackground(Color.decode("#4A90E2")); // 🔷 Apply header background color
+        header.setForeground(Color.WHITE);              // 🔷 White text
+        header.setOpaque(true);
+        header.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, Color.GRAY));
 
         JScrollPane scrollPane = new JScrollPane(table);
         scrollPane.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
         JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 10));
         btnPanel.setBackground(StyleLoader1.BG_COLOR);
-        
+
         JButton changeRoleBtn = StyleLoader1.styleButton(new JButton("Change Role"));
         JButton viewOrdersBtn = StyleLoader1.styleButton(new JButton("View Orders"));
         JButton deleteUserBtn = StyleLoader1.styleButton(new JButton("Delete User"));
@@ -478,7 +494,6 @@ public class AdminPanel extends JFrame {
             if (row >= 0) {
                 int userId = (int) userTableModel.getValueAt(row, 0);
                 String userName = (String) userTableModel.getValueAt(row, 1);
-                // Prevent admin from deleting themselves
                 if (userId == adminUserId) {
                     JOptionPane.showMessageDialog(this, "You cannot delete your own account.", "Warning", JOptionPane.WARNING_MESSAGE);
                     return;
@@ -497,13 +512,13 @@ public class AdminPanel extends JFrame {
                 JOptionPane.showMessageDialog(this, "Select a user to delete.");
             }
         });
-        
 
         panel.add(scrollPane, BorderLayout.CENTER);
         panel.add(btnPanel, BorderLayout.SOUTH);
         loadUsers();
         return panel;
     }
+
 
     private void loadUsers() {
         userTableModel.setRowCount(0);

@@ -2,6 +2,7 @@ package main;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.JTableHeader;
 import java.awt.*;
 import java.sql.*;
 
@@ -11,17 +12,44 @@ public class OrderHistory extends JFrame {
 
     public OrderHistory() {
         setTitle("📜 Order History - BookMart");
-        setSize(700, 400);
+        setSize(800, 450);
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
         setLocationRelativeTo(null);
+        setLayout(new BorderLayout());
 
+        // Header panel (same as cart)
+        JPanel headerPanel = new JPanel();
+        headerPanel.setBackground(new Color(0x003059));
+        JLabel headerLabel = new JLabel("Your Order History");
+        headerLabel.setFont(new Font("Arial", Font.BOLD, 20));
+        headerLabel.setForeground(Color.WHITE);
+        headerPanel.add(headerLabel);
+        add(headerPanel, BorderLayout.NORTH);
+
+        // Table setup
         orderModel = new DefaultTableModel(new String[]{
-            "Order ID", "Date", "Total Price", "Status", "Currency", "Book Titles"
+            "Order ID", "Date", "Total Price",  "Currency", "Book Titles"
         }, 0);
         orderTable = new JTable(orderModel);
-        JScrollPane scrollPane = new JScrollPane(orderTable);
+        orderTable.setRowHeight(24);
 
+        // Header styling
+        JTableHeader tableHeader = orderTable.getTableHeader();
+        tableHeader.setBackground(new Color(0x4a90e2));
+        tableHeader.setForeground(Color.WHITE);
+        tableHeader.setFont(new Font("SansSerif", Font.BOLD, 14));
+
+        JScrollPane scrollPane = new JScrollPane(orderTable);
+        scrollPane.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+        add(scrollPane, BorderLayout.CENTER);
+
+        // View button
         JButton viewItemsBtn = new JButton("📦 View Order Items");
+        viewItemsBtn.setBackground(new Color(0x4a90e2));
+        viewItemsBtn.setForeground(Color.WHITE);
+        viewItemsBtn.setFocusPainted(false);
+        viewItemsBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
+        viewItemsBtn.setBorder(BorderFactory.createEmptyBorder(8, 16, 8, 16));
 
         viewItemsBtn.addActionListener(e -> {
             int selectedRow = orderTable.getSelectedRow();
@@ -33,8 +61,10 @@ public class OrderHistory extends JFrame {
             }
         });
 
-        add(scrollPane, BorderLayout.CENTER);
-        add(viewItemsBtn, BorderLayout.SOUTH);
+        JPanel btnPanel = new JPanel();
+        btnPanel.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0));
+        btnPanel.add(viewItemsBtn);
+        add(btnPanel, BorderLayout.SOUTH);
 
         loadOrders();
     }
@@ -42,14 +72,14 @@ public class OrderHistory extends JFrame {
     private void loadOrders() {
         try (Connection conn = DBConnection.getConnection()) {
             String sql = """
-                SELECT o.order_id, o.order_date, o.total_amount, o.status, c.currency_code,
+                SELECT o.order_id, o.order_date, o.total_amount, c.currency_code,
                        GROUP_CONCAT(DISTINCT b.title ORDER BY b.title SEPARATOR ', ') AS book_titles
                 FROM orders o
                 JOIN currencies c ON o.currency_id = c.currency_id
                 LEFT JOIN order_items oi ON o.order_id = oi.order_id
                 LEFT JOIN books b ON oi.book_id = b.book_id
                 WHERE o.user_id = ?
-                GROUP BY o.order_id, o.order_date, o.total_amount, o.status, c.currency_code
+                GROUP BY o.order_id, o.order_date, o.total_amount, c.currency_code
                 ORDER BY o.order_date DESC
             """;
             PreparedStatement stmt = conn.prepareStatement(sql);
@@ -62,7 +92,7 @@ public class OrderHistory extends JFrame {
                     rs.getInt("order_id"),
                     rs.getTimestamp("order_date"),
                     rs.getDouble("total_amount"),
-                    rs.getString("status"),
+                    
                     rs.getString("currency_code"),
                     rs.getString("book_titles")
                 });
