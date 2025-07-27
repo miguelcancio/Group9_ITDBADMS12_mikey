@@ -20,14 +20,22 @@ public class AdminService {
     public boolean addBook(int adminUserId, String title, String genre, double price, int stock) {
         validateBookInput(title, genre, price, stock);
         try (Connection conn = DBConnection.getConnection()) {
-            CallableStatement stmt = conn.prepareCall("{CALL addBooks(?, ?, ?, ?)}");
-            stmt.setString(1, sanitize(title));
-            stmt.setString(2, sanitize(genre));
-            stmt.setDouble(3, price);
-            stmt.setInt(4, stock);
-            stmt.executeUpdate();
-            logAdminAction(conn, adminUserId, "ADD_BOOK", "Added book: " + title);
-            return true;
+            conn.setAutoCommit(false);
+            try {
+                CallableStatement stmt = conn.prepareCall("{CALL addBooks(?, ?, ?, ?)}");
+                stmt.setString(1, sanitize(title));
+                stmt.setString(2, sanitize(genre));
+                stmt.setDouble(3, price);
+                stmt.setInt(4, stock);
+                stmt.executeUpdate();
+                logAdminAction(conn, adminUserId, "ADD_BOOK", "Added book: " + title);
+                conn.commit();
+                return true;
+            } catch (SQLException e) {
+                conn.rollback();
+                e.printStackTrace();
+                return false;
+            }
         } catch (SQLException e) {
             e.printStackTrace();
             return false;
@@ -47,16 +55,24 @@ public class AdminService {
     public boolean updateBook(int adminUserId, int bookId, String title, String genre, double price, int stock) {
         validateBookInput(title, genre, price, stock);
         try (Connection conn = DBConnection.getConnection()) {
-            CallableStatement stmt = conn.prepareCall("{CALL updateBookDetails(?, ?, ?, ?, ?, ?)}");
-            stmt.setInt(1, adminUserId);
-            stmt.setInt(2, bookId);
-            stmt.setString(3, sanitize(title));
-            stmt.setString(4, sanitize(genre));
-            stmt.setDouble(5, price);
-            stmt.setInt(6, stock);
-            stmt.executeUpdate();
-            logAdminAction(conn, adminUserId, "UPDATE_BOOK", "Updated book ID: " + bookId);
-            return true;
+            conn.setAutoCommit(false);
+            try {
+                CallableStatement stmt = conn.prepareCall("{CALL updateBookDetails(?, ?, ?, ?, ?, ?)}");
+                stmt.setInt(1, adminUserId);
+                stmt.setInt(2, bookId);
+                stmt.setString(3, sanitize(title));
+                stmt.setString(4, sanitize(genre));
+                stmt.setDouble(5, price);
+                stmt.setInt(6, stock);
+                stmt.executeUpdate();
+                logAdminAction(conn, adminUserId, "UPDATE_BOOK", "Updated book ID: " + bookId);
+                conn.commit();
+                return true;
+            } catch (SQLException e) {
+                conn.rollback();
+                e.printStackTrace();
+                return false;
+            }
         } catch (SQLException e) {
             e.printStackTrace();
             return false;
@@ -71,11 +87,19 @@ public class AdminService {
      */
     public boolean deleteBook(int adminUserId, int bookId) {
         try (Connection conn = DBConnection.getConnection()) {
-            CallableStatement stmt = conn.prepareCall("{CALL removeBooks(?)}");
-            stmt.setInt(1, bookId);
-            stmt.executeUpdate();
-            logAdminAction(conn, adminUserId, "DELETE_BOOK", "Deleted book ID: " + bookId);
-            return true;
+            conn.setAutoCommit(false);
+            try {
+                CallableStatement stmt = conn.prepareCall("{CALL removeBooks(?)}");
+                stmt.setInt(1, bookId);
+                stmt.executeUpdate();
+                logAdminAction(conn, adminUserId, "DELETE_BOOK", "Deleted book ID: " + bookId);
+                conn.commit();
+                return true;
+            } catch (SQLException e) {
+                conn.rollback();
+                e.printStackTrace();
+                return false;
+            }
         } catch (SQLException e) {
             e.printStackTrace();
             return false;
