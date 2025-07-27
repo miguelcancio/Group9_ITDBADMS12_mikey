@@ -2,8 +2,15 @@ package main;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.*;
 import java.awt.*;
 import java.util.List;
+import java.util.Arrays;
+import java.util.stream.Collectors;
+
+import main.StyleLoader1;
+
+
 
 public class AdminPanel extends JFrame {
     private final AdminService adminService = new AdminService();
@@ -12,13 +19,20 @@ public class AdminPanel extends JFrame {
     // Book Management
     private DefaultTableModel bookTableModel;
     // Orders
-    private DefaultTableModel orderTableModel;
-    // Transactions
-    private DefaultTableModel transactionTableModel;
+    private DefaultTableModel orderTableModel; 
+    // Transactions 
+    // private DefaultTableModel transactionTableModel;
     // Users
     private DefaultTableModel userTableModel;
     // Currencies
     private DefaultTableModel currencyTableModel;
+    
+    private JPanel contentPanel;
+    private JPanel cardPanel;
+    private JTabbedPane tabbedPane;
+
+    
+    
 
     public AdminPanel() {
         if (!isAdmin()) {
@@ -30,82 +44,163 @@ public class AdminPanel extends JFrame {
         setSize(900, 600);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
+        
 
-        JTabbedPane tabs = new JTabbedPane();
-        tabs.addTab("Books", createBookPanel());
-        tabs.addTab("Orders", createOrderPanel());
-        tabs.addTab("Transactions", createTransactionPanel());
-        tabs.addTab("Users", createUserPanel());
-        tabs.addTab("Currencies", createCurrencyPanel());
-        add(tabs);
+        JPanel headerPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 20, 10));
+        headerPanel.setBackground(Color.decode("#003059"));
+
+        String[] sections = { "Books", "Orders", "Users", "Currencies" };
+        JButton[] navButtons = new JButton[sections.length];
+
+        // Shared font style
+        Font headerFont = new Font("Segoe UI", Font.BOLD, 14);
+
+        for (int i = 0; i < sections.length; i++) {
+            String section = sections[i];
+            JButton button = new JButton(section);
+            button.setFocusPainted(false);
+            button.setForeground(Color.WHITE);
+            button.setBackground(Color.decode("#003059"));
+            button.setFont(headerFont);
+            button.setBorder(BorderFactory.createEmptyBorder(8, 16, 8, 16));
+            button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+            int index = i; // required for lambda
+            button.addActionListener(e -> switchPanel(section));
+            navButtons[i] = button;
+            headerPanel.add(button);
+        }
+
+        // Add header to top
+        add(headerPanel, BorderLayout.NORTH);
+
+        // Add content panel (the main area that changes)
+        contentPanel = new JPanel(new BorderLayout());
+        add(contentPanel, BorderLayout.CENTER);
+
+        // Initially show Books panel
+        switchPanel("Books");
+
     }
+    
+    private void switchPanel(String section) {
+        contentPanel.removeAll();
+
+        switch (section) {
+            case "Books":
+                contentPanel.add(createBookPanel(), BorderLayout.CENTER);
+                break;
+            case "Orders":
+                contentPanel.add(createOrderPanel(), BorderLayout.CENTER);
+                break;
+
+            case "Users":
+                contentPanel.add(createUserPanel(), BorderLayout.CENTER);
+                break;
+            case "Currencies":
+                contentPanel.add(createCurrencyPanel(), BorderLayout.CENTER);
+                break;
+        }
+
+        contentPanel.revalidate();
+        contentPanel.repaint();
+    }
+
 
     private boolean isAdmin() {
         // In a real app, check role from DB or session
         // Here, assume user is admin if they reached this panel
         return adminUserId > 0;
     }
+    
 
     // BOOK MANAGEMENT TAB
     private JPanel createBookPanel() {
         JPanel panel = new JPanel(new BorderLayout());
-        bookTableModel = new DefaultTableModel(new String[]{"ID", "Title", "Genre", "Price", "Stock"}, 0);
-        JTable table = new JTable(bookTableModel);
-        loadBooks();
+        JPanel gridPanel = new JPanel(new GridLayout(0, 3, 15, 15));
+        gridPanel.setBackground(StyleLoader1.BG_COLOR);
+
+        JScrollPane scrollPane = new JScrollPane(gridPanel);
+        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
+        scrollPane.setBorder(null);
+        panel.setBackground(StyleLoader1.BG_COLOR);
+        panel.add(scrollPane, BorderLayout.CENTER);
 
         JPanel btnPanel = new JPanel();
         JButton addBtn = new JButton("Add Book");
-        JButton editBtn = new JButton("Edit Book");
-        JButton delBtn = new JButton("Delete Book");
-        btnPanel.add(addBtn); btnPanel.add(editBtn); btnPanel.add(delBtn);
+        btnPanel.add(StyleLoader1.styleButton(addBtn));
+        panel.add(btnPanel, BorderLayout.SOUTH);
 
-        addBtn.addActionListener(e -> addOrEditBookDialog(false, -1));
-        editBtn.addActionListener(e -> {
-            int row = table.getSelectedRow();
-            if (row >= 0) {
-                int bookId = (int) bookTableModel.getValueAt(row, 0);
-                addOrEditBookDialog(true, bookId);
-            } else {
-                JOptionPane.showMessageDialog(this, "Select a book to edit.");
-            }
+        addBtn.addActionListener(e -> {
+            addOrEditBookDialog(false, -1);
+            loadBooksAsCards(gridPanel);
         });
-        delBtn.addActionListener(e -> {
-            int row = table.getSelectedRow();
-            if (row >= 0) {
-                int bookId = (int) bookTableModel.getValueAt(row, 0);
-                int confirm = JOptionPane.showConfirmDialog(this, "Delete book ID " + bookId + "?", "Confirm", JOptionPane.YES_NO_OPTION);
+
+        loadBooksAsCards(gridPanel);
+        return panel;
+    }
+    private void loadBooksAsCards(JPanel gridPanel) {
+        gridPanel.removeAll();
+        List<AdminService.BookInfo> books = adminService.getAllBooks(adminUserId);
+        for (AdminService.BookInfo book : books) {
+            JPanel card = new JPanel(new BorderLayout(10, 5));
+            card.setBackground(StyleLoader1.CARD_COLOR);
+            card.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(new Color(220, 220, 220)),
+                    BorderFactory.createEmptyBorder(10, 10, 10, 10)));
+
+            JLabel title = new JLabel(book.title);
+            title.setFont(StyleLoader1.TITLE_FONT);
+
+            JLabel genre = new JLabel("Genre: " + book.genre);
+            JLabel price = new JLabel("₱" + book.price);
+            JLabel stock = new JLabel("Stock: " + book.stockQuantity);
+
+            JPanel info = new JPanel(new GridLayout(0, 1));
+            info.setOpaque(false);
+            info.add(title);
+            info.add(genre);
+            info.add(price);
+            info.add(stock);
+
+            JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+            btnRow.setOpaque(false);
+            JButton editBtn = new JButton("Edit");
+            JButton delBtn = new JButton("Delete");
+            StyleLoader1.styleButton(editBtn);
+            StyleLoader1.styleButton(delBtn);
+            btnRow.add(editBtn);
+            btnRow.add(delBtn);
+
+            editBtn.addActionListener(e -> {
+                addOrEditBookDialog(true, book.bookId);
+                loadBooksAsCards(gridPanel);
+            });
+
+            delBtn.addActionListener(e -> {
+                int confirm = JOptionPane.showConfirmDialog(this, "Delete book \"" + book.title + "\"?", "Confirm", JOptionPane.YES_NO_OPTION);
                 if (confirm == JOptionPane.YES_OPTION) {
-                    boolean ok = adminService.deleteBook(adminUserId, bookId);
+                    boolean ok = adminService.deleteBook(adminUserId, book.bookId);
                     if (ok) {
                         JOptionPane.showMessageDialog(this, "Book deleted.");
-                        loadBooks();
+                        loadBooksAsCards(gridPanel);
                     } else {
                         JOptionPane.showMessageDialog(this, "Failed to delete book.", "Error", JOptionPane.ERROR_MESSAGE);
                     }
                 }
-            } else {
-                JOptionPane.showMessageDialog(this, "Select a book to delete.");
-            }
-        });
-
-        panel.add(new JScrollPane(table), BorderLayout.CENTER);
-        panel.add(btnPanel, BorderLayout.SOUTH);
-        return panel;
-    }
-
-    private void loadBooks() {
-        bookTableModel.setRowCount(0);
-        List<AdminService.BookInfo> books = adminService.getAllBooks(adminUserId);
-        for (AdminService.BookInfo book : books) {
-            bookTableModel.addRow(new Object[]{
-                book.bookId,
-                book.title,
-                book.genre,
-                book.price,
-                book.stockQuantity
             });
+
+            card.add(info, BorderLayout.CENTER);
+            card.add(btnRow, BorderLayout.SOUTH);
+            gridPanel.add(card);
         }
+
+        gridPanel.revalidate();
+        gridPanel.repaint();
     }
+
+
+
 
     private void addOrEditBookDialog(boolean isEdit, int bookId) {
         JTextField t = new JTextField(), g = new JTextField(), p = new JTextField(), s = new JTextField();
@@ -116,60 +211,198 @@ public class AdminPanel extends JFrame {
         panel.add(new JLabel("Stock:")); panel.add(s);
 
         if (isEdit) {
-            // Optionally pre-fill fields with book info (not implemented here)
+            // Optional: Pre-fill fields if needed
         }
 
-        if (JOptionPane.showConfirmDialog(this, panel, (isEdit ? "Edit" : "Add") + " Book", JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION) {
+        int result = JOptionPane.showConfirmDialog(this, panel,
+                (isEdit ? "Edit" : "Add") + " Book", JOptionPane.OK_CANCEL_OPTION);
+
+        if (result == JOptionPane.OK_OPTION) {
+            String title = t.getText().trim();
+            String genre = g.getText().trim();
+            String priceStr = p.getText().trim();
+            String stockStr = s.getText().trim();
+
+            if (title.isEmpty() || genre.isEmpty() || priceStr.isEmpty() || stockStr.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Please fill in all fields.", "Input Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
             try {
-                String title = t.getText();
-                String genre = g.getText();
-                double price = Double.parseDouble(p.getText());
-                int stock = Integer.parseInt(s.getText());
+                double price = Double.parseDouble(priceStr);
+                int stock = Integer.parseInt(stockStr);
+
                 boolean ok;
                 if (isEdit) {
                     ok = adminService.updateBook(adminUserId, bookId, title, genre, price, stock);
                 } else {
                     ok = adminService.addBook(adminUserId, title, genre, price, stock);
                 }
+
                 if (ok) {
                     JOptionPane.showMessageDialog(this, (isEdit ? "Book updated." : "Book added."));
-                    loadBooks();
+
+                    // ✅ Real-time GUI refresh
+                    SwingUtilities.invokeLater(() -> {
+                        // Find the current book panel and refresh it
+                        JPanel bookPanel = createBookPanel();
+                        contentPanel.removeAll();
+                        contentPanel.add(bookPanel, BorderLayout.CENTER);
+                        contentPanel.revalidate();
+                        contentPanel.repaint();
+                    });
+
+
+
                 } else {
                     JOptionPane.showMessageDialog(this, "Operation failed.", "Error", JOptionPane.ERROR_MESSAGE);
                 }
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "Invalid input.", "Error", JOptionPane.ERROR_MESSAGE);
+
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(this, "Please enter valid numeric values for Price and Stock.", "Input Error", JOptionPane.ERROR_MESSAGE);
             }
         }
     }
 
-    // ORDERS TAB
+
+
+
+
+
+ // ORDERS TAB
     private JPanel createOrderPanel() {
         JPanel panel = new JPanel(new BorderLayout());
-        orderTableModel = new DefaultTableModel(new String[]{"OrderID", "UserID", "Date", "Amount", "Currency", "Status", "Books Ordered"}, 0);
-        JTable table = new JTable(orderTableModel);
-        loadOrders();
-        panel.add(new JScrollPane(table), BorderLayout.CENTER);
+        panel.setBackground(StyleLoader1.BG_COLOR);
+
+        orderTableModel = new DefaultTableModel(new String[]{
+            "Order ID", "User", "Date", "Amount", "Currency", "Status", "Books"
+        }, 0);
+
+        JTable table = new JTable(orderTableModel) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+
+            // Ensure multi-line display in "Books" column
+            @Override
+            public TableCellRenderer getCellRenderer(int row, int column) {
+                if (column == 6) { // "Books" column
+                    return new JTextAreaRenderer();
+                }
+                return super.getCellRenderer(row, column);
+            }
+        };
+
+        table.setFont(StyleLoader1.TEXT_FONT);
+        table.setRowHeight(60); // taller to allow space for multi-line text
+        table.setShowHorizontalLines(false);
+        table.setShowVerticalLines(false);
+        table.setIntercellSpacing(new Dimension(0, 10)); // space between rows
+        table.setSelectionBackground(new Color(220, 235, 245));
+
+        // Default renderer with padding and alternating row colors
+        table.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value,
+                                                           boolean isSelected, boolean hasFocus,
+                                                           int row, int column) {
+                Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                if (!isSelected) {
+                    c.setBackground(row % 2 == 0 ? Color.WHITE : new Color(245, 245, 245));
+                    c.setForeground(Color.BLACK);
+                }
+                setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10)); // internal padding
+                setFont(StyleLoader1.TEXT_FONT);
+                return c;
+            }
+        });
+
+        // Header styling
+        JTableHeader header = table.getTableHeader();
+        header.setFont(new Font("Segoe UI", Font.BOLD, 15));
+        header.setBackground(new Color(0x4A90E2)); // Light Blue
+        header.setForeground(Color.WHITE);
+        header.setOpaque(true);
+        header.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, Color.GRAY));
+
+        JScrollPane scrollPane = new JScrollPane(table);
+        scrollPane.setBorder(BorderFactory.createEmptyBorder());
+
+        JPanel card = new JPanel(new BorderLayout());
+        card.setBackground(StyleLoader1.CARD_COLOR);
+        card.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        card.add(scrollPane, BorderLayout.CENTER);
+
+        panel.add(StyleLoader1.cardWrap(card), BorderLayout.CENTER);
+
+        loadOrders(); // Load the formatted data
         return panel;
+    }
+
+    // Renderer to support multi-line text (especially for the "Books" column)
+    class JTextAreaRenderer extends JTextArea implements TableCellRenderer {
+        public JTextAreaRenderer() {
+            setLineWrap(true);
+            setWrapStyleWord(true);
+            setOpaque(true);
+            setFont(StyleLoader1.TEXT_FONT);
+            setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10)); // same padding
+        }
+
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
+                                                       boolean hasFocus, int row, int column) {
+            setText(value == null ? "" : value.toString());
+            setBackground(isSelected ? table.getSelectionBackground()
+                                     : row % 2 == 0 ? Color.WHITE : new Color(245, 245, 245));
+            setForeground(isSelected ? table.getSelectionForeground() : Color.BLACK);
+            return this;
+        }
     }
 
     private void loadOrders() {
         orderTableModel.setRowCount(0);
         List<AdminService.OrderInfo> orders = adminService.getAllOrders(adminUserId);
+
         for (AdminService.OrderInfo o : orders) {
-            orderTableModel.addRow(new Object[]{o.orderId, o.userId, o.orderDate, o.totalAmount, o.currencyCode, o.status, o.bookList});
+            // Ensure newline per book, trimming extra whitespace
+            String booksFormatted = Arrays.stream(o.bookList.split(","))
+                                          .map(String::trim)
+                                          .collect(Collectors.joining("\n"));
+
+            orderTableModel.addRow(new Object[]{
+                o.orderId, o.userId, o.orderDate, o.totalAmount,
+                o.currencyCode, o.status, booksFormatted
+            });
         }
     }
+
+/*
 
     // TRANSACTIONS TAB
     private JPanel createTransactionPanel() {
         JPanel panel = new JPanel(new BorderLayout());
-        transactionTableModel = new DefaultTableModel(new String[]{"TransactionID", "OrderID", "Method", "Status", "Amount", "Timestamp"}, 0);
+        panel.setBackground(StyleLoader1.BG_COLOR);
+
+        transactionTableModel = new DefaultTableModel(new String[]{"Transaction ID", "Order ID", "Method", "Status", "Amount", "Timestamp"}, 0);
         JTable table = new JTable(transactionTableModel);
+        table.setFillsViewportHeight(true);
+        table.setRowHeight(28);
+        table.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        table.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 14));
+        table.setShowGrid(false);
+        table.setIntercellSpacing(new Dimension(0, 0));
+
+        JScrollPane scrollPane = new JScrollPane(table);
+        
+        scrollPane.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        panel.add(scrollPane, BorderLayout.CENTER);
+
         loadTransactions();
-        panel.add(new JScrollPane(table), BorderLayout.CENTER);
         return panel;
     }
+
 
     private void loadTransactions() {
         transactionTableModel.setRowCount(0);
@@ -178,18 +411,33 @@ public class AdminPanel extends JFrame {
             transactionTableModel.addRow(new Object[]{log.transactionId, log.orderId, log.paymentMethod, log.paymentStatus, log.amount, log.timestamp});
         }
     }
+*/
+    
 
     // USERS TAB
     private JPanel createUserPanel() {
         JPanel panel = new JPanel(new BorderLayout());
-        userTableModel = new DefaultTableModel(new String[]{"UserID", "Name", "Role"}, 0);
-        JTable table = new JTable(userTableModel);
-        loadUsers();
+        panel.setBackground(StyleLoader1.BG_COLOR);
 
-        JPanel btnPanel = new JPanel();
-        JButton changeRoleBtn = new JButton("Change Role");
-        JButton viewOrdersBtn = new JButton("View User Orders");
-        JButton deleteUserBtn = new JButton("Delete User");
+        userTableModel = new DefaultTableModel(new String[]{"User ID", "Name", "Role"}, 0);
+        JTable table = new JTable(userTableModel);
+        table.setFillsViewportHeight(true);
+        table.setRowHeight(28);
+        table.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        table.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 14));
+        table.setShowGrid(false);
+        table.setIntercellSpacing(new Dimension(0, 0));
+
+        JScrollPane scrollPane = new JScrollPane(table);
+        scrollPane.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 10));
+        btnPanel.setBackground(StyleLoader1.BG_COLOR);
+        
+        JButton changeRoleBtn = StyleLoader1.styleButton(new JButton("Change Role"));
+        JButton viewOrdersBtn = StyleLoader1.styleButton(new JButton("View Orders"));
+        JButton deleteUserBtn = StyleLoader1.styleButton(new JButton("Delete User"));
+
         btnPanel.add(changeRoleBtn);
         btnPanel.add(viewOrdersBtn);
         btnPanel.add(deleteUserBtn);
@@ -249,9 +497,11 @@ public class AdminPanel extends JFrame {
                 JOptionPane.showMessageDialog(this, "Select a user to delete.");
             }
         });
+        
 
-        panel.add(new JScrollPane(table), BorderLayout.CENTER);
+        panel.add(scrollPane, BorderLayout.CENTER);
         panel.add(btnPanel, BorderLayout.SOUTH);
+        loadUsers();
         return panel;
     }
 
@@ -265,16 +515,43 @@ public class AdminPanel extends JFrame {
                 user.role
             });
         }
+        
     }
+    
 
-    // CURRENCIES TAB
+ 
+ // CURRENCIES TAB
     private JPanel createCurrencyPanel() {
         JPanel panel = new JPanel(new BorderLayout());
-        currencyTableModel = new DefaultTableModel(new String[]{"Currency", "Rate to PHP"}, 0);
-        JTable table = new JTable(currencyTableModel);
-        loadCurrencies();
+        panel.setBackground(StyleLoader1.BG_COLOR);
 
-        JButton updateBtn = new JButton("Update Rate");
+        // Table Model
+        currencyTableModel = new DefaultTableModel(new String[]{"Currency", "Rate to PHP"}, 0);
+        JTable table = new JTable(currencyTableModel) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
+        table.setFont(StyleLoader1.TEXT_FONT);
+        table.setRowHeight(32);
+        table.setShowGrid(false);
+        table.setIntercellSpacing(new Dimension(0, 10));
+        table.setSelectionBackground(new Color(220, 235, 245));
+
+        // Table Header styling
+        JTableHeader header = table.getTableHeader();
+        header.setFont(new Font("Segoe UI", Font.BOLD, 15));
+        header.setBackground(new Color(0x4A90E2));
+        header.setForeground(Color.WHITE);
+        header.setOpaque(true);
+        header.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, Color.GRAY));
+
+        JScrollPane scrollPane = new JScrollPane(table);
+        scrollPane.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        // Update Button
+        JButton updateBtn = StyleLoader1.styleButton(new JButton("Update Rate"));
         updateBtn.addActionListener(e -> {
             int row = table.getSelectedRow();
             if (row >= 0) {
@@ -296,10 +573,27 @@ public class AdminPanel extends JFrame {
                 JOptionPane.showMessageDialog(this, "Select a currency to update.");
             }
         });
-        panel.add(new JScrollPane(table), BorderLayout.CENTER);
-        panel.add(updateBtn, BorderLayout.SOUTH);
+
+        // Button Panel
+        JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        btnPanel.setBackground(StyleLoader1.BG_COLOR);
+        btnPanel.add(updateBtn);
+
+        // Combine all panels
+        JPanel card = new JPanel(new BorderLayout());
+        card.setBackground(StyleLoader1.CARD_COLOR);
+        card.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        card.add(scrollPane, BorderLayout.CENTER);
+        card.add(btnPanel, BorderLayout.SOUTH);
+
+        panel.add(StyleLoader1.cardWrap(card), BorderLayout.CENTER);
+
+        loadCurrencies();
         return panel;
     }
+
+
+
 
     private void loadCurrencies() {
         currencyTableModel.setRowCount(0);
