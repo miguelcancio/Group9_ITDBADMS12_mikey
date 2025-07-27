@@ -8,12 +8,9 @@ import java.sql.*;
 
 public class StaffPanel extends JFrame {
     private JComboBox<String> currencySelector;
-    private JTextField searchField;
     private String currentCurrency = "PHP";
     private int selectedBookId = -1;
     private JPanel bookPanel;
-    private JButton viewDetailsBtn;
-    private JButton addToCartBtn;
     private JButton addBookBtn;
     private JButton removeBookBtn;
     private final int staffUserId = LoginScreen.loggedInUserId;
@@ -30,13 +27,14 @@ public class StaffPanel extends JFrame {
 
         StyleLoader style = new StyleLoader("src/css/customercatalog.css");
 
-        // Header
+     // Header
         JPanel topPanel = new JPanel(new BorderLayout());
         topPanel.setBackground(new Color(0x003059));
         topPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
 
-        JLabel title = new JLabel("<html>📘 BookMart<br>Staff Panel</html>");
+        JLabel title = new JLabel("<html>Staff Panel</html>");
         title.setFont(style.getFont("button.font"));
+        title.setFont(new Font("Arial", Font.BOLD, 20));
         title.setForeground(Color.WHITE);
         title.setHorizontalAlignment(SwingConstants.LEFT);
         topPanel.add(title, BorderLayout.WEST);
@@ -44,48 +42,25 @@ public class StaffPanel extends JFrame {
         JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 2));
         rightPanel.setOpaque(false);
 
-        JButton cartBtn = new JButton("Cart");
-        JButton ordersBtn = new JButton("Order History");
         JButton logoutBtn = new JButton("Logout");
-        currencySelector = new JComboBox<>(new String[]{"PHP", "USD", "KRW"});
-        searchField = new JTextField(15);
-        JButton searchBtn = new JButton("Search");
-        
-        // Set minimum sizes to prevent truncation
-        searchField.setMinimumSize(new Dimension(100, 25));
-        searchField.setPreferredSize(new Dimension(150, 25));
-        currencySelector.setMinimumSize(new Dimension(80, 25));
-        currencySelector.setPreferredSize(new Dimension(80, 25));
-        
+
+
         // Staff-specific buttons
         addBookBtn = new JButton("➕ Add Book");
         removeBookBtn = new JButton("🗑️ Remove Book");
-        
-        // Apply styles
-        style.applyStyle(searchBtn, "round");
-        style.applyStyle(cartBtn, "round");
-        style.applyStyle(ordersBtn, "round");
-        style.applyStyle(logoutBtn, "round");
-        style.applyStyle(addBookBtn, "round");
-        style.applyStyle(removeBookBtn, "round");
 
-        JLabel currencyLabel = new JLabel("Currency:");
-        currencyLabel.setForeground(Color.WHITE);
-        currencyLabel.setFont(style.getFont("button.font"));
 
-        rightPanel.add(currencyLabel);
-        rightPanel.add(Box.createHorizontalStrut(8)); // Add spacing
-        rightPanel.add(currencySelector);
-        rightPanel.add(searchField);
-        rightPanel.add(searchBtn);
+
+
+        rightPanel.add(Box.createHorizontalStrut(8));
+
         rightPanel.add(addBookBtn);
         rightPanel.add(removeBookBtn);
-        rightPanel.add(cartBtn);
-        rightPanel.add(ordersBtn);
         rightPanel.add(logoutBtn);
 
         topPanel.add(rightPanel, BorderLayout.EAST);
         add(topPanel, BorderLayout.NORTH);
+
 
         // Book Cards Panel
         bookPanel = new JPanel(new GridLayout(0, 3, 20, 20));
@@ -100,38 +75,17 @@ public class StaffPanel extends JFrame {
         bottomPanel.setBackground(new Color(0xf4f6fa));
         bottomPanel.setBorder(new EmptyBorder(10, 0, 10, 0));
 
-        viewDetailsBtn = new JButton("View Details");
-        addToCartBtn = new JButton("Add to Cart");
 
-        JButton[] bottomButtons = {viewDetailsBtn, addToCartBtn};
-        for (JButton btn : bottomButtons) {
-            btn.setBackground(style.getColor("button.bg"));
-            btn.setForeground(style.getColor("button.fg"));
-            btn.setFont(style.getFont("button.font"));
-            btn.setFocusPainted(false);
-            btn.setBorder(style.getRoundedBorder(30));
-        }
-
-        viewDetailsBtn.setEnabled(false);
-        addToCartBtn.setEnabled(false);
-
-        bottomPanel.add(viewDetailsBtn);
-        bottomPanel.add(addToCartBtn);
         add(bottomPanel, BorderLayout.SOUTH);
 
         // Event Listeners
-        searchBtn.addActionListener(e -> loadBooks(searchField.getText(), (String) currencySelector.getSelectedItem()));
-        currencySelector.addActionListener(e -> loadBooks(searchField.getText(), (String) currencySelector.getSelectedItem()));
-        cartBtn.addActionListener(e -> new Cart().setVisible(true));
-        ordersBtn.addActionListener(e -> new OrderHistory().setVisible(true));
         logoutBtn.addActionListener(e -> logout());
         
         // Staff-specific event listeners
         addBookBtn.addActionListener(e -> showAddBookDialog());
         removeBookBtn.addActionListener(e -> removeSelectedBook());
         
-        viewDetailsBtn.addActionListener(e -> showBookDetails());
-        addToCartBtn.addActionListener(e -> addToCart());
+
 
         // Load initial books
         loadBooks("", "PHP");
@@ -214,10 +168,7 @@ public class StaffPanel extends JFrame {
         card.setBorder(new EmptyBorder(15, 15, 15, 15));
         card.setPreferredSize(new Dimension(250, 200));
         
-        // Book icon
-        JLabel iconLabel = new JLabel("📖", SwingConstants.CENTER);
-        iconLabel.setFont(new Font("Arial", Font.PLAIN, 40));
-        card.add(iconLabel, BorderLayout.NORTH);
+
         
         // Book info
         JPanel infoPanel = new JPanel();
@@ -229,6 +180,7 @@ public class StaffPanel extends JFrame {
         titleLabel.setFont(new Font("Arial", Font.BOLD, 14));
         
         JLabel genreLabel = new JLabel(genre);
+        genreLabel.setFont(new Font("SansSerif", Font.ITALIC, 12));
         genreLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         genreLabel.setForeground(Color.GRAY);
         
@@ -236,11 +188,12 @@ public class StaffPanel extends JFrame {
         JLabel priceLabel = new JLabel(currencySymbol + String.format("%.2f", price));
         priceLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         priceLabel.setFont(new Font("Arial", Font.BOLD, 16));
-        priceLabel.setForeground(new Color(0x2e7d32));
+        priceLabel.setForeground(new Color(0xc0722c));
         
         JLabel stockLabel = new JLabel("Stock: " + stock);
+        stockLabel.setFont(new Font("SansSerif", Font.PLAIN, 12));
         stockLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-        stockLabel.setForeground(stock > 0 ? Color.GREEN : Color.RED);
+
         
         infoPanel.add(titleLabel);
         infoPanel.add(Box.createVerticalStrut(5));
@@ -257,8 +210,6 @@ public class StaffPanel extends JFrame {
             @Override
             public void mouseClicked(java.awt.event.MouseEvent evt) {
                 selectedBookId = bookId;
-                viewDetailsBtn.setEnabled(true);
-                addToCartBtn.setEnabled(stock > 0);
                 
                 // Highlight selected card
                 for (java.awt.Component comp : bookPanel.getComponents()) {
@@ -332,7 +283,9 @@ public class StaffPanel extends JFrame {
                 if (success) {
                     JOptionPane.showMessageDialog(dialog, "Book added successfully!");
                     dialog.dispose();
-                    loadBooks(searchField.getText(), (String) currencySelector.getSelectedItem());
+                    loadBooks("", currentCurrency); // Refresh after adding
+
+
                 } else {
                     JOptionPane.showMessageDialog(dialog, "Failed to add book.");
                 }
@@ -344,6 +297,7 @@ public class StaffPanel extends JFrame {
         cancelBtn.addActionListener(e -> dialog.dispose());
         
         dialog.setVisible(true);
+        
     }
 
     private boolean addBook(String title, String genre, double price, int stock) {
@@ -366,9 +320,8 @@ public class StaffPanel extends JFrame {
             if (success) {
                 JOptionPane.showMessageDialog(this, "Book removed successfully!");
                 selectedBookId = -1;
-                viewDetailsBtn.setEnabled(false);
-                addToCartBtn.setEnabled(false);
-                loadBooks(searchField.getText(), (String) currencySelector.getSelectedItem());
+                loadBooks("", currentCurrency); // Refresh after removing
+
             } else {
                 JOptionPane.showMessageDialog(this, "Failed to remove book.");
             }
@@ -399,43 +352,7 @@ public class StaffPanel extends JFrame {
         }
     }
 
-    private void addToCart() {
-        if (selectedBookId == -1) return;
-        
-        String input = JOptionPane.showInputDialog(this, "Enter quantity:");
-        if (input != null && !input.trim().isEmpty()) {
-            try {
-                int quantity = Integer.parseInt(input.trim());
-                if (quantity <= 0) {
-                    JOptionPane.showMessageDialog(this, "Please enter a positive quantity.");
-                    return;
-                }
-                
-                boolean success = addToCart(selectedBookId, quantity);
-                if (success) {
-                    JOptionPane.showMessageDialog(this, "Added to cart successfully!");
-                } else {
-                    JOptionPane.showMessageDialog(this, "Failed to add to cart.");
-                }
-            } catch (NumberFormatException e) {
-                JOptionPane.showMessageDialog(this, "Please enter a valid number.");
-            }
-        }
-    }
 
-    private boolean addToCart(int bookId, int quantity) {
-        try (Connection conn = DBConnection.getConnection()) {
-            CallableStatement stmt = conn.prepareCall("{CALL addToCart(?, ?, ?)}");
-            stmt.setInt(1, staffUserId);
-            stmt.setInt(2, bookId);
-            stmt.setInt(3, quantity);
-            stmt.executeUpdate();
-            return true;
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return false;
-        }
-    }
 
     private void logout() {
         LoginScreen.loggedInUserId = -1;
