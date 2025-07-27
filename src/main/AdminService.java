@@ -116,13 +116,21 @@ public class AdminService {
     public boolean updateUserRole(int adminUserId, int userId, String newRole) {
         validateRoleName(newRole);
         try (Connection conn = DBConnection.getConnection()) {
-            CallableStatement stmt = conn.prepareCall("{CALL updateUserRole(?, ?, ?)}");
-            stmt.setInt(1, adminUserId);
-            stmt.setInt(2, userId);
-            stmt.setString(3, sanitize(newRole));
-            stmt.executeUpdate();
-            logAdminAction(conn, adminUserId, "UPDATE_USER_ROLE", "Changed user ID " + userId + " to role " + newRole);
-            return true;
+            conn.setAutoCommit(false);
+            try {
+                CallableStatement stmt = conn.prepareCall("{CALL updateUserRole(?, ?, ?)}");
+                stmt.setInt(1, adminUserId);
+                stmt.setInt(2, userId);
+                stmt.setString(3, sanitize(newRole));
+                stmt.executeUpdate();
+                logAdminAction(conn, adminUserId, "UPDATE_USER_ROLE", "Changed user ID " + userId + " to role " + newRole);
+                conn.commit();
+                return true;
+            } catch (SQLException e) {
+                conn.rollback();
+                e.printStackTrace();
+                return false;
+            }
         } catch (SQLException e) {
             e.printStackTrace();
             return false;
@@ -334,11 +342,19 @@ public class AdminService {
      */
     public boolean deleteUser(int adminUserId, int targetUserId) {
         try (Connection conn = DBConnection.getConnection()) {
-            CallableStatement stmt = conn.prepareCall("{CALL removeUsers(?)}");
-            stmt.setInt(1, targetUserId);
-            stmt.executeUpdate();
-            logAdminAction(conn, adminUserId, "DELETE_USER", "Deleted user ID: " + targetUserId);
-            return true;
+            conn.setAutoCommit(false);
+            try {
+                CallableStatement stmt = conn.prepareCall("{CALL removeUsers(?)}");
+                stmt.setInt(1, targetUserId);
+                stmt.executeUpdate();
+                logAdminAction(conn, adminUserId, "DELETE_USER", "Deleted user ID: " + targetUserId);
+                conn.commit();
+                return true;
+            } catch (SQLException e) {
+                conn.rollback();
+                e.printStackTrace();
+                return false;
+            }
         } catch (SQLException e) {
             e.printStackTrace();
             return false;
