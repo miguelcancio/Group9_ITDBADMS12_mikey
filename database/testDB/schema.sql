@@ -528,7 +528,9 @@ CREATE USER 'staff'@'%' IDENTIFIED BY 'StaffBookMart1234!';
 GRANT SELECT, INSERT, UPDATE ON bookmartdb.books TO 'staff'@'%';
 GRANT SELECT, INSERT, UPDATE ON bookmartdb.cart_items TO 'staff'@'%';
 FLUSH PRIVILEGES;
-
-REVOKE INSERT, UPDATE ON bookmartdb.books FROM 'staff'@'%';
 REVOKE SELECT, INSERT, UPDATE ON bookmartdb.cart_items FROM 'staff'@'%';
+REVOKE SELECT, INSERT, UPDATE ON bookmartdb.transaction_logs FROM 'staff'@'%';
 FLUSH PRIVILEGES;
+
+
+
