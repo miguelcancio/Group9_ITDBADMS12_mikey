@@ -13,6 +13,7 @@ public class CustomerCatalog extends JFrame {
     private JPanel bookPanel;
     private JButton viewDetailsBtn;
     private JButton addToCartBtn;
+    private JPanel selectedCard = null; // Track selected card
 
     public CustomerCatalog() {
         setTitle("📖 BookMart Online - Browse Books");
@@ -20,7 +21,7 @@ public class CustomerCatalog extends JFrame {
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
-        getContentPane().setBackground(new Color(0xf4f6fa)); // new background
+        getContentPane().setBackground(new Color(0xf4f6fa));
 
         StyleLoader style = new StyleLoader("src/css/customercatalog.css");
 
@@ -43,26 +44,18 @@ public class CustomerCatalog extends JFrame {
         currencySelector = new JComboBox<>(new String[]{"PHP", "USD", "KRW"});
         searchField = new JTextField(15);
         JButton searchBtn = new JButton("Search");
-        
-     // Apply oblong/pill styles to key buttons
+
         style.applyStyle(searchBtn, "round");
         style.applyStyle(cartBtn, "round");
         style.applyStyle(ordersBtn, "round");
         style.applyStyle(logoutBtn, "round");
-
-
-        JButton[] rightButtons = {cartBtn, ordersBtn, logoutBtn, searchBtn};
-        for (JButton btn : rightButtons) {
-        	style.applyStyle(btn, "round");
-
-        }
 
         JLabel currencyLabel = new JLabel("Currency:");
         currencyLabel.setForeground(Color.WHITE);
         currencyLabel.setFont(style.getFont("button.font"));
 
         rightPanel.add(currencyLabel);
-        rightPanel.add(Box.createHorizontalStrut(8)); // Add spacing
+        rightPanel.add(Box.createHorizontalStrut(8));
         rightPanel.add(currencySelector);
         rightPanel.add(searchField);
         rightPanel.add(searchBtn);
@@ -108,8 +101,25 @@ public class CustomerCatalog extends JFrame {
         // Events
         currencySelector.addActionListener(e -> loadBooks(searchField.getText(), (String) currencySelector.getSelectedItem()));
         searchBtn.addActionListener(e -> loadBooks(searchField.getText(), (String) currencySelector.getSelectedItem()));
-        cartBtn.addActionListener(e -> new Cart().setVisible(true));
-        ordersBtn.addActionListener(e -> new OrderHistory().setVisible(true));
+        cartBtn.addActionListener(e -> new Cart(this).setVisible(true));
+
+        ordersBtn.addActionListener(e -> {
+            OrderHistory history = new OrderHistory();
+            history.setVisible(true);
+            history.addWindowListener(new java.awt.event.WindowAdapter() {
+                @Override
+                public void windowClosed(java.awt.event.WindowEvent e) {
+                    loadBooks(searchField.getText(), (String) currencySelector.getSelectedItem());
+                }
+
+                @Override
+                public void windowClosing(java.awt.event.WindowEvent e) {
+                    loadBooks(searchField.getText(), (String) currencySelector.getSelectedItem());
+                }
+            });
+        });
+
+
         logoutBtn.addActionListener(e -> {
             dispose();
             new LoginScreen().setVisible(true);
@@ -165,6 +175,11 @@ public class CustomerCatalog extends JFrame {
 
     private void loadBooks(String keyword, String currency) {
         bookPanel.removeAll();
+        selectedCard = null;
+        selectedBookId = -1;
+        viewDetailsBtn.setEnabled(false);
+        addToCartBtn.setEnabled(false);
+
         try (Connection conn = DBConnection.getConnection()) {
             String sql = """
                     SELECT b.book_id, b.title, b.genre,
@@ -228,6 +243,19 @@ public class CustomerCatalog extends JFrame {
 
                 card.addMouseListener(new java.awt.event.MouseAdapter() {
                     public void mouseClicked(java.awt.event.MouseEvent evt) {
+                        if (selectedCard != null) {
+                            selectedCard.setBorder(BorderFactory.createCompoundBorder(
+                                    BorderFactory.createLineBorder(new Color(0xe0e0e0)),
+                                    new EmptyBorder(10, 10, 10, 10)));
+                            selectedCard.setBackground(Color.WHITE);
+                        }
+
+                        selectedCard = card;
+                        selectedCard.setBorder(BorderFactory.createCompoundBorder(
+                                BorderFactory.createLineBorder(new Color(0x003059), 2),
+                                new EmptyBorder(10, 10, 10, 10)));
+                        selectedCard.setBackground(new Color(0xeaf0fa));
+
                         selectedBookId = bookId;
                         viewDetailsBtn.setEnabled(true);
                         addToCartBtn.setEnabled(true);
@@ -239,9 +267,12 @@ public class CustomerCatalog extends JFrame {
         } catch (SQLException e) {
             e.printStackTrace();
         }
+
         bookPanel.revalidate();
         bookPanel.repaint();
     }
-
+    public void refreshBooks() {
+        loadBooks(searchField.getText(), (String) currencySelector.getSelectedItem());
+    }
 
 }
