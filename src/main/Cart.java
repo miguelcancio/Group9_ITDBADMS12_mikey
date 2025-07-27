@@ -11,8 +11,12 @@ public class Cart extends JFrame {
     private ArrayList<CartItem> cartItems = new ArrayList<>();
     private double total = 0.0;
     private int selectedCurrencyId = 1; // default: PHP
+    private CustomerCatalog catalog; // Reference to refresh book list
 
-    public Cart() {
+    // Constructor accepting CustomerCatalog reference
+    public Cart(CustomerCatalog catalog) {
+        this.catalog = catalog;
+
         setTitle("🛒 Your Cart - BookMart");
         setSize(600, 400);
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
@@ -27,6 +31,11 @@ public class Cart extends JFrame {
         JButton orderBtn = new JButton("✅ Place Order");
         orderBtn.addActionListener(e -> placeOrder());
         add(orderBtn, BorderLayout.SOUTH);
+    }
+
+    // Optional: default constructor (if needed elsewhere)
+    public Cart() {
+        this(null);
     }
 
     private void loadCart() {
@@ -102,6 +111,25 @@ public class Cart extends JFrame {
             }
             itemStmt.executeBatch();
 
+            // Deduct stock safely
+            PreparedStatement updateStockStmt = conn.prepareStatement(
+                "UPDATE books SET stock_quantity = stock_quantity - ? WHERE book_id = ? AND stock_quantity >= ?"
+            );
+            for (CartItem item : cartItems) {
+                updateStockStmt.setInt(1, item.quantity);
+                updateStockStmt.setInt(2, item.bookId);
+                updateStockStmt.setInt(3, item.quantity);
+                updateStockStmt.addBatch();
+            }
+            int[] updateCounts = updateStockStmt.executeBatch();
+            for (int count : updateCounts) {
+                if (count == 0) {
+                    conn.rollback();
+                    JOptionPane.showMessageDialog(this, "❌ Failed to update stock. Possibly insufficient stock.");
+                    return;
+                }
+            }
+
             // Clear cart
             PreparedStatement clearCartStmt = conn.prepareStatement("DELETE FROM cart_items WHERE user_id = ?");
             clearCartStmt.setInt(1, LoginScreen.loggedInUserId);
@@ -109,7 +137,12 @@ public class Cart extends JFrame {
 
             conn.commit();
             JOptionPane.showMessageDialog(this, "✅ Order placed!");
-            this.dispose(); // Close cart window after ordering
+
+            if (catalog != null) {
+                catalog.refreshBooks(); // 🔁 Update CustomerCatalog display
+            }
+
+            this.dispose();
 
         } catch (SQLException e) {
             e.printStackTrace();

@@ -101,8 +101,25 @@ public class CustomerCatalog extends JFrame {
         // Events
         currencySelector.addActionListener(e -> loadBooks(searchField.getText(), (String) currencySelector.getSelectedItem()));
         searchBtn.addActionListener(e -> loadBooks(searchField.getText(), (String) currencySelector.getSelectedItem()));
-        cartBtn.addActionListener(e -> new Cart().setVisible(true));
-        ordersBtn.addActionListener(e -> new OrderHistory().setVisible(true));
+        cartBtn.addActionListener(e -> new Cart(this).setVisible(true));
+
+        ordersBtn.addActionListener(e -> {
+            OrderHistory history = new OrderHistory();
+            history.setVisible(true);
+            history.addWindowListener(new java.awt.event.WindowAdapter() {
+                @Override
+                public void windowClosed(java.awt.event.WindowEvent e) {
+                    loadBooks(searchField.getText(), (String) currencySelector.getSelectedItem());
+                }
+
+                @Override
+                public void windowClosing(java.awt.event.WindowEvent e) {
+                    loadBooks(searchField.getText(), (String) currencySelector.getSelectedItem());
+                }
+            });
+        });
+
+
         logoutBtn.addActionListener(e -> {
             dispose();
             new LoginScreen().setVisible(true);
@@ -254,4 +271,8 @@ public class CustomerCatalog extends JFrame {
         bookPanel.revalidate();
         bookPanel.repaint();
     }
+    public void refreshBooks() {
+        loadBooks(searchField.getText(), (String) currencySelector.getSelectedItem());
+    }
+
 }
